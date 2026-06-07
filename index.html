@@ -1,0 +1,4718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>5v5 Flag — Play Designer</title>
+
+<!-- ── Installable-app (PWA) setup ───────────────────────────────── -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e0f10">
+<!-- iOS home-screen app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="5v5 Flag">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<!-- ──────────────────────────────────────────────────────────────── -->
+<style>
+  :root {
+    --field-green: #2d5a3d;
+    --field-line: #f4f1ea;
+    --rush-line: #ffd84d;
+    --los-color: #ffffff;
+    --bg: #0e0f10;
+    --panel: #18191b;
+    --panel-2: #232527;
+    --border: #2c2e31;
+    --text: #f4f1ea;
+    --text-dim: #8b8f93;
+    --accent: #ff6b35;
+    --offense: #ff6b35;
+    --defense: #4a90e2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', 'Arial Narrow', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: contain;
+  }
+
+  .topbar {
+    height: 56px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    position: relative;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Impact', 'Oswald', 'Arial Black', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .logo .accent { color: var(--accent); }
+  .topbar-spacer { flex: 1; }
+  .top-btn {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    height: 44px;
+    min-width: 140px;
+    padding: 0 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .top-btn:active { background: var(--accent); color: #000; }
+  .flip-menu-wrap {
+    position: relative;
+  }
+  .flip-menu-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none;
+    min-width: 160px;
+    z-index: 100;
+    overflow: hidden;
+  }
+  .flip-menu-panel.open { display: block; }
+  .flip-menu-item {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 12px 14px;
+    text-align: left;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .flip-menu-item:active { background: var(--panel-2); }
+  .flip-menu-item + .flip-menu-item { border-top: 1px solid var(--border); }
+  .top-select {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    height: 44px;
+    min-width: 140px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+                      linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 14px) center, calc(100% - 9px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 28px;
+    max-width: 220px;
+  }
+  .top-select:focus { outline: none; border-color: var(--accent); }
+
+  .side-toggle {
+    display: flex;
+    background: var(--panel-2);
+    border-radius: 6px;
+    padding: 3px;
+    border: 1px solid var(--border);
+    height: 44px;
+  }
+  .side-toggle button {
+    background: transparent;
+    color: var(--text);
+    border: none;
+    min-width: 90px;
+    padding: 0 14px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .side-toggle button:not(.active) { opacity: 0.55; }
+  .side-toggle button.active.offense { background: var(--offense); color: #000; opacity: 1; }
+  .side-toggle button.active.defense { background: var(--defense); color: #000; opacity: 1; }
+
+  .main {
+    height: calc(100vh - 56px);
+    display: flex;
+    overflow: hidden;
+  }
+  .field-area {
+    flex: 1;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+    min-width: 0;
+  }
+  .field-viewport {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;          /* hide the parts of the field outside the camera */
+  }
+  .field-wrap {
+    position: absolute;
+    /* JS sets width/height/transform; don't pre-set anything that fights it */
+    transform-origin: 0 0;
+    transition: transform 0.25s ease;
+    top: 0;
+    left: 0;
+  }
+  /* When the wrap is taller than the viewport (because aspect-ratio + width:100%),
+     we still center it. The transform set in JS handles all positioning/scaling. */
+
+  svg.field {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--field-green);
+    border-radius: 4px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 80px rgba(0,0,0,0.35);
+    pointer-events: none;
+  }
+  /* Cap box cells need to receive touch events for long-press */
+  svg.field #capBoxes rect {
+    pointer-events: all;
+    touch-action: none;
+  }
+  svg.routes-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 4;
+    overflow: visible;
+  }
+  svg.routes-layer .route-path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: stroke;       /* taps register on the stroke itself */
+    cursor: pointer;
+    stroke-width: 0.55;
+  }
+  svg.routes-layer .route-path.live {
+    pointer-events: none;
+    stroke-dasharray: 0.6 0.5;
+    opacity: 0.85;
+  }
+  svg.routes-layer .route-path.selected {
+    stroke-width: 0.85;
+    filter: drop-shadow(0 0 0.6px rgba(255,255,255,0.9));
+  }
+  svg.routes-layer .route-arrow {
+    pointer-events: none;
+  }
+  .yard-text {
+    fill: rgba(244, 241, 234, 0.4);
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 2px;
+    letter-spacing: 0.1em;
+    dominant-baseline: middle;
+  }
+  .endzone-text {
+    fill: rgba(244, 241, 234, 0.5);
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 6px;
+    letter-spacing: 0.2em;
+    text-anchor: middle;
+  }
+
+  /* LOS dashed line + handle */
+  .los-line {
+    display: none;
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 0;
+    border-left: 3px dashed #00e5ff;
+    transform: translateX(-50%);
+    z-index: 4;
+    pointer-events: none;
+    filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.6));
+  }
+  .field-wrap.show-los .los-line {
+    display: block;
+  }
+  .los-grip {
+    display: none;  /* replaced: the C player acts as the LOS handle */
+  }
+
+  /* Player tokens (HTML divs, layered above SVG) */
+  .player-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .token {
+    position: absolute;
+    /* width/height set in JS render() per-token to ensure circular shape */
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 800;
+    font-size: clamp(20px, 2.4vw, 26px);
+    text-align: center;
+    border: 1.5px solid #000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    pointer-events: auto;
+    will-change: left, top;
+  }
+  /* In vertical mode: wrap is rotated -90°. Tokens just need rotate(90deg) to
+     keep labels upright. STRETCH is now baked into wrap dimensions so no
+     counter-scaling is needed — tokens render naturally as circles. */
+  .field-wrap.vertical .token { transform: translate(-50%, -50%) rotate(90deg); }
+  .token-label { display: inline-block; }
+  .field-wrap.vertical.flipped .token-label { transform: rotate(180deg); display: inline-block; }
+  .field-wrap.vertical.flipped .token { transform: translate(-50%, -50%) rotate(-90deg) scaleX(-1); }
+  .token.dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    z-index: 50;
+  }
+  .token.offense { border-radius: 50%; }
+  .token.defense { border-radius: 4px; }
+  .token.los-handle {
+    /* no ring; the C is just a regular token */
+  }
+  .token.selected { outline: 2.5px dashed var(--text); outline-offset: 3px; }
+
+  /* ---------- D-PAD (nudge selected token) ---------- */
+  .dpad {
+    position: absolute;
+    top: 76px;
+    right: 16px;
+    width: 132px;
+    height: 132px;
+    z-index: 35;
+    display: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 6px;
+  }
+  .dpad.open { display: grid; }
+  .dpad {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .dpad button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .dpad button:active { background: var(--accent); color: #000; }
+  .dpad .empty { background: transparent; border: none; pointer-events: none; }
+  .dpad .center {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  /* Position grid cells */
+  .dpad .up    { grid-column: 2; grid-row: 1; }
+  .dpad .left  { grid-column: 1; grid-row: 2; }
+  .dpad .center{ grid-column: 2; grid-row: 2; }
+  .dpad .right { grid-column: 3; grid-row: 2; }
+  .dpad .down  { grid-column: 2; grid-row: 3; }
+
+  @media (max-width: 700px) {
+    .dpad { width: 110px; height: 110px; top: 70px; }
+    .dpad button { font-size: 16px; }
+  }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 380px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+  }
+  .modal h3 {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .modal .body {
+    padding: 16px 18px;
+    overflow-y: auto;
+  }
+  .modal .body label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .modal .body input[type="text"] {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .saved-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .saved-list li {
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .saved-list li .name {
+    flex: 1;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .saved-list li .when {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+  .saved-list .empty {
+    color: var(--text-dim);
+    font-size: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .saved-list .del {
+    background: transparent;
+    border: 1px solid #5a2020;
+    color: #d76060;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    font-size: 14px;
+  }
+  .saved-list .del:active { background: #5a2020; color: #fff; }
+  .modal .footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .modal .footer button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .modal .footer button.primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+  .modal .footer button:active { filter: brightness(0.85); }
+
+  .cap-swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .cap-swatch {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cap-swatch.selected { border-color: var(--text); }
+  .cap-clear-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cap-clear-btn:active { background: var(--panel-2); color: var(--text); }
+
+  /* ---------- ROUTE PICKER GRID ---------- */
+  .route-pick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .route-pick-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .route-pick-card:active { background: var(--accent); }
+  .route-pick-thumb {
+    width: 60px;
+    height: 60px;
+    background: var(--field-green);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
+  }
+  .route-pick-thumb svg { width: 100%; height: 100%; display: block; }
+  .route-pick-name {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+  @media (max-width: 480px) {
+    .route-pick-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- SEGMENT ADJUST (rotate / length a single segment) ---------- */
+  .seg-adjust {
+    position: absolute;
+    top: 76px;
+    right: 16px;
+    width: 180px;
+    z-index: 36;
+    display: none;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 12px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .seg-adjust.open { display: flex; }
+  .seg-adjust-label {
+    color: var(--text-dim);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .seg-adjust-row { display: flex; gap: 6px; }
+  .seg-btn {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 8px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg-btn:active { background: var(--accent); color: #000; }
+  .seg-btn-done {
+    background: var(--accent);
+    color: #000;
+    border: 1px solid var(--accent);
+    padding: 9px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg-btn-done:active { filter: brightness(0.85); }
+  .route-path.segment-selected { opacity: 1; }
+
+  /* ---------- WAYPOINT ADJUST D-PAD (for curve routes) ---------- */
+  .wp-adjust {
+    position: absolute;
+    top: 76px;
+    right: 16px;
+    width: 180px;
+    z-index: 36;
+    display: none;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 12px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .wp-adjust.open { display: flex; }
+  .wp-dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .wp-btn {
+    aspect-ratio: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wp-btn:active { background: var(--accent); color: #000; }
+  .wp-center {
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+  .wp-up    { grid-column: 2; grid-row: 1; }
+  .wp-left  { grid-column: 1; grid-row: 2; }
+  .wp-center{ grid-column: 2; grid-row: 2; }
+  .wp-right { grid-column: 3; grid-row: 2; }
+  .wp-down  { grid-column: 2; grid-row: 3; }
+  .route-waypoint { pointer-events: none; }
+  .route-waypoint.wp-selected { stroke: #fff; stroke-width: 0.25; }
+
+  /* ---------- ROUTE-DRAW D-PAD (8 directions + undo/finish) ---------- */
+  .route-dpad {
+    position: absolute;
+    top: 76px;
+    right: 16px;
+    width: 180px;
+    z-index: 36;
+    display: none;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .route-dpad.open { display: grid; }
+  .route-dpad .rd-btn {
+    aspect-ratio: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .route-dpad .rd-btn:active { background: var(--accent); color: #000; }
+  .route-dpad .rd-center {
+    aspect-ratio: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .route-dpad .rd-count {
+    color: var(--accent);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .route-dpad .rd-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .route-dpad .rd-action {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 4px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .route-dpad .rd-action.rd-undo:active { background: #5a3a20; color: #fff; }
+  .route-dpad .rd-action.rd-finish {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+  .route-dpad .rd-action.rd-finish:active { filter: brightness(0.85); }
+  @media (max-width: 700px) {
+    .route-dpad { width: 150px; top: 70px; }
+    .route-dpad .rd-btn { font-size: 16px; }
+  }
+
+  /* ---------- DROPDOWN MENU (top bar) ---------- */
+  .menu-wrap { position: relative; }
+  .menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    min-width: 180px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none;
+    z-index: 200;
+  }
+  .menu-panel.open { display: block; }
+  .menu-item {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 10px 12px;
+    text-align: left;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .menu-item:active { background: var(--panel-2); }
+  .menu-item .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--text-dim);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .menu-item.add-off .dot { background: var(--offense); }
+  .menu-item.add-def .dot { background: var(--defense); }
+  .menu-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 8px;
+  }
+
+  .inspector {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 240px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 40;
+  }
+  .inspector.open { display: block; }
+  .inspector h3 {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    color: var(--text-dim);
+  }
+  .inspector label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    margin-top: 12px;
+  }
+  .inspector label:first-of-type { margin-top: 0; }
+  .inspector input[type="text"] {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .inspector input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  .color-swatch {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .color-swatch.selected { border-color: var(--text); }
+  .route-btn {
+    width: 100%;
+    margin-top: 14px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .route-btn:active { background: var(--accent); color: #000; }
+  .route-btn.has-route {
+    border-color: #5a2020;
+    color: #d76060;
+  }
+  .route-btn.has-route:active { background: #5a2020; color: #fff; }
+  .delete-btn {
+    width: 100%;
+    margin-top: 14px;
+    background: transparent;
+    border: 1px solid #5a2020;
+    color: #d76060;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .delete-btn:active { background: #5a2020; color: #fff; }
+
+  .helper {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(24, 25, 27, 0.92);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 30;
+    max-width: 80%;
+    text-align: center;
+  }
+  .helper.show { opacity: 1; }
+
+  /* Drawing mode banner */
+  .draw-mode-banner {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: #000;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 800;
+    z-index: 35;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .draw-mode-banner.show { display: flex; }
+  .draw-mode-banner .cancel-x {
+    background: rgba(0,0,0,0.2);
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  @media (max-width: 700px) {
+    .topbar { padding: 0 8px; gap: 6px; }
+    .logo { font-size: 14px; }
+    .top-btn { padding: 0 10px; font-size: 12px; min-width: 100px; }
+    .top-select { font-size: 12px; min-width: 100px; padding-right: 26px; }
+    .side-toggle button { padding: 0 10px; font-size: 12px; min-width: 70px; }
+    .inspector { width: calc(100% - 32px); right: 16px; left: 16px; top: auto; bottom: 90px; }
+    .bottom-bar { bottom: 16px; padding: 6px; }
+    .bottom-bar button { padding: 8px 10px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">5V5<span class="accent">.</span>FLAG</div>
+    <div class="menu-wrap">
+      <button class="top-btn" id="menuBtn">≡ MENU</button>
+      <div class="menu-panel" id="menuPanel">
+        <button class="menu-item" id="savePlayBtn">💾 Save Play</button>
+        <button class="menu-item" id="loadPlayBtn">📂 Load Play</button>
+        <button class="menu-item" id="installDemoBtn">⬇ Install Demo Play</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" id="pickFormBtn">📋 Pick Formation</button>
+        <button class="menu-item" id="saveFormBtn">💾 Save Formation</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item add-off" id="addOff"><span class="dot"></span>Add Offensive Player</button>
+        <button class="menu-item add-def" id="addDef"><span class="dot"></span>Add Defensive Player</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item add-def" id="addDefenseBtn"><span class="dot"></span>Add Defense (Cover 3)</button>
+        <button class="menu-item add-def" id="loadDefenseBtn"><span class="dot"></span>Load Defense</button>
+        <button class="menu-item add-def" id="saveDefenseBtn"><span class="dot"></span>Save Current Defense</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" id="capBoxesBtn"><span class="dot" style="background:#e64545"></span>Toggle Cap Boxes</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" id="defaultBtn">Reset Offense</button>
+        <button class="menu-item" id="resetBtn">Clear Field</button>
+      </div>
+    </div>
+    <div class="flip-menu-wrap">
+      <button class="top-btn" id="flipBtn">⇄ FLIP ▾</button>
+      <div class="flip-menu-panel" id="flipMenu">
+        <button class="flip-menu-item" id="flipPlayBtn">↔ Play</button>
+        <button class="flip-menu-item" id="flipRYBtn">⇆ Red ↔ Yellow</button>
+        <button class="flip-menu-item" id="flipRGBtn">⇆ Red ↔ Green</button>
+        <button class="flip-menu-item" id="flipYGBtn">⇆ Yellow ↔ Green</button>
+        <button class="flip-menu-item" id="flipDirBtn">↕ Direction</button>
+        <button class="flip-menu-item" id="flipFormBtn">↔ Formation</button>
+      </div>
+    </div>
+    <select class="top-select" id="playerSelect">
+      <option value="">Select player…</option>
+    </select>
+    <div class="topbar-spacer"></div>
+    <div class="side-toggle">
+      <button id="sideOff" class="offense active">Offense</button>
+      <button id="sideDef" class="defense">Defense</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="field-area" id="fieldArea">
+      <div class="helper" id="helper">Drag players • Drag white grip to move LOS</div>
+      <div class="draw-mode-banner" id="drawBanner">
+        <span id="drawBannerText">Drag from the player to draw a route</span>
+        <span class="cancel-x" id="drawCancel">✕</span>
+      </div>
+
+      <div class="field-viewport" id="fieldViewport">
+        <div class="field-wrap" id="fieldWrap">
+          <svg class="field" id="field" viewBox="0 0 80 53" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <pattern id="grass" patternUnits="userSpaceOnUse" width="4" height="4">
+                <rect width="4" height="4" fill="#2d5a3d"/>
+                <path d="M0 2 L4 2" stroke="#2a5238" stroke-width="0.3" opacity="0.4"/>
+              </pattern>
+            </defs>
+            <rect width="80" height="53" fill="url(#grass)"/>
+            <rect x="0" y="0" width="8.88" height="53" fill="#1f4029" opacity="0.7"/>
+            <rect x="71.12" y="0" width="8.88" height="53" fill="#1f4029" opacity="0.7"/>
+            <line x1="8.88" y1="0" x2="8.88" y2="53" stroke="#f4f1ea" stroke-width="0.3"/>
+            <line x1="71.12" y1="0" x2="71.12" y2="53" stroke="#f4f1ea" stroke-width="0.3"/>
+            <rect x="0" y="0" width="80" height="53" fill="none" stroke="#f4f1ea" stroke-width="0.25"/>
+            <g id="yardLines"></g>
+            <g id="hashMarks"></g>
+            <line id="rushLine" stroke="#ffd84d" stroke-width="0.15" opacity="1"/>
+            <g id="capBoxes" style="display:none"></g>
+            <g id="playNameLabel" style="display:none"></g>
+          </svg>
+
+          <!-- Routes layer (SVG, between field and players) -->
+          <svg class="routes-layer" id="routesLayer" viewBox="0 0 80 53" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <!-- arrowheads drawn inline to inherit per-route stroke color -->
+            </defs>
+            <g id="routesGroup"></g>
+          </svg>
+
+          <!-- LOS dashed line, follows losYards -->
+          <div class="los-line" id="losLine"></div>
+
+          <!-- LOS grip handle (absolutely positioned by JS) -->
+          <div class="los-grip" id="losGrip">⇆</div>
+
+          <!-- Player tokens layer -->
+          <div class="player-layer" id="playerLayer"></div>
+        </div>
+      </div>
+
+      <div class="inspector" id="inspector">
+        <h3 id="inspTitle">Player</h3>
+        <label>Label</label>
+        <input type="text" id="inspLabel" maxlength="6" placeholder="QB, X, 7..."
+               autocomplete="off" autocorrect="off" autocapitalize="characters">
+        <label>Color</label>
+        <div class="color-grid" id="colorGrid"></div>
+        <button class="route-btn" id="pickRouteBtn" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);">📋 Pick Route</button>
+        <button class="route-btn" id="routeBtn">Draw Route</button>
+        <button class="route-btn" id="addOptionBtn" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);">➕ Add Option Branch</button>
+        <button class="delete-btn" id="deleteBtn">Remove player</button>
+      </div>
+
+      <div class="dpad" id="dpad">
+        <button class="up"     data-dir="up">▲</button>
+        <button class="left"   data-dir="left">◀</button>
+        <div class="center">Nudge</div>
+        <button class="right"  data-dir="right">▶</button>
+        <button class="down"   data-dir="down">▼</button>
+      </div>
+
+      <!-- Route-draw D-pad: 8 directions + Undo + Finish -->
+      <div class="route-dpad" id="routeDpad">
+        <button class="rd-btn rd-up-left"    data-rdir="ul">↖</button>
+        <button class="rd-btn rd-up"         data-rdir="up">▲</button>
+        <button class="rd-btn rd-up-right"   data-rdir="ur">↗</button>
+        <button class="rd-btn rd-left"       data-rdir="left">◀</button>
+        <div class="rd-center">Draw<br><span class="rd-count" id="rdCount">0y</span></div>
+        <button class="rd-btn rd-right"      data-rdir="right">▶</button>
+        <button class="rd-btn rd-down-left"  data-rdir="dl">↙</button>
+        <button class="rd-btn rd-down"       data-rdir="down">▼</button>
+        <button class="rd-btn rd-down-right" data-rdir="dr">↘</button>
+        <div class="rd-actions">
+          <button class="rd-action rd-undo" id="rdUndoBtn">↶ Undo</button>
+          <button class="rd-action rd-finish" id="rdFinishBtn">✓ Finish</button>
+        </div>
+      </div>
+
+      <!-- Segment-adjust panel: shown when a straight-segment is selected -->
+      <div class="seg-adjust" id="segAdjust">
+        <div class="seg-adjust-label">Adjust selected segment</div>
+        <div class="seg-adjust-row">
+          <button class="seg-btn" id="segRotateCcwBtn">↺ Shallower</button>
+          <button class="seg-btn" id="segRotateCwBtn">↻ Steeper</button>
+        </div>
+        <div class="seg-adjust-row">
+          <button class="seg-btn" id="segLongerBtn">+ Longer</button>
+          <button class="seg-btn" id="segShorterBtn">− Shorter</button>
+        </div>
+        <button class="seg-btn-done" id="segDoneBtn">Done</button>
+      </div>
+
+      <!-- Waypoint adjust D-pad: shown when a curve waypoint is selected -->
+      <div class="wp-adjust" id="wpAdjust">
+        <div class="seg-adjust-label">Nudge waypoint (1y per tap)</div>
+        <div class="wp-dpad">
+          <button class="wp-btn wp-up"    id="wpUpBtn">▲</button>
+          <button class="wp-btn wp-left"  id="wpLeftBtn">◀</button>
+          <div class="wp-center"></div>
+          <button class="wp-btn wp-right" id="wpRightBtn">▶</button>
+          <button class="wp-btn wp-down"  id="wpDownBtn">▼</button>
+        </div>
+        <button class="seg-btn-done" id="wpDoneBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save / Load modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal">
+      <h3 id="modalTitle">Save Play</h3>
+      <div class="body" id="modalBody"></div>
+      <div class="footer">
+        <button id="modalCancel">Cancel</button>
+        <button id="modalConfirm" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+//=========================================================================
+// CONFIG
+//=========================================================================
+const FIELD_W = 80, FIELD_H = 53;
+const YARD = 80 / 90;
+const COLORS = [
+  '#ff6b35', '#ffd84d', '#4a90e2', '#7ed957',
+  '#e64980', '#a78bfa', '#f4f1ea', '#1a1a1a',
+  '#ff4444', '#00b8a9', '#fb8c00', '#9c27b0'
+];
+
+//=========================================================================
+// STATE
+//=========================================================================
+let players = [];
+let nextId = 1;
+let selectedId = null;
+let showInspector = false;  // when true, full inspector shows; when false, only D-pad
+let losYards = 35;       // 1..69, distance from left goal line
+let flipped = false;
+let stretched = true;    // play-axis stretch (on = routes look more developed)
+let cameraFollowsLos = true;  // when true, show 40y window centered around LOS
+let capBoxesOn = false;       // overlay 3x3 grid 20y forward of LOS
+let currentPlayName = null;   // name of last loaded play (shown above top cap boxes)
+let playNameFlipped = false;  // when true, isolated L/R in the name are swapped
+let capBoxFills = {};         // key "row,col" → color hex (or undefined for none)
+
+const CAMERA_YARDS_BEHIND_LOS = 7;
+const CAMERA_YARDS_AHEAD_LOS  = 23;
+const CAMERA_TOTAL_YARDS = CAMERA_YARDS_BEHIND_LOS + CAMERA_YARDS_AHEAD_LOS;
+
+// Routes state. Each: {id, ownerId (player id), points: [{x,y}], smoothed: bool}
+let routes = [];
+let nextRouteId = 1;
+let selectedRouteId = null;
+let selectedSegmentIdx = null;   // selected segment within a route (for rotate/length)
+let selectedWaypointIdx = null;  // selected waypoint of a curve route (for nudge)
+let selectedBranchIdx = null;    // selected branch (when segment belongs to a branch)
+let selectedSegmentIsBranch = false;
+
+// Route-drawing mode (entered via inspector "Draw Route")
+let drawMode = null;     // null | { ownerId, points: [{x,y}] }
+
+// Single drag state machine. type: 'token' | 'los' | null
+let drag = null;          // { type, id?, startClient, startValue, didMove }
+
+//=========================================================================
+// ELEMENTS
+//=========================================================================
+const fieldWrap   = document.getElementById('fieldWrap');
+const fieldViewport = document.getElementById('fieldViewport');
+const playerLayer = document.getElementById('playerLayer');
+const losLine     = document.getElementById('losLine');
+const losGrip     = document.getElementById('losGrip');
+const rushLineEl  = document.getElementById('rushLine');
+const inspector   = document.getElementById('inspector');
+const inspLabel   = document.getElementById('inspLabel');
+const inspTitle   = document.getElementById('inspTitle');
+const colorGrid   = document.getElementById('colorGrid');
+const helper      = document.getElementById('helper');
+const routesGroup = document.getElementById('routesGroup');
+const routeBtn    = document.getElementById('routeBtn');
+const drawBanner  = document.getElementById('drawBanner');
+const drawBannerText = document.getElementById('drawBannerText');
+const drawCancel  = document.getElementById('drawCancel');
+
+//=========================================================================
+// FIELD MARKINGS
+//=========================================================================
+function drawYardLines() {
+  const g = document.getElementById('yardLines');
+  for (let y = 5; y <= 65; y += 5) {
+    const x = 8.88 + y * YARD;
+    const isMid = y === 35;
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', x); ln.setAttribute('y1', 1);
+    ln.setAttribute('x2', x); ln.setAttribute('y2', 52);
+    ln.setAttribute('stroke', '#f4f1ea');
+    ln.setAttribute('stroke-width', isMid ? 0.3 : 0.18);
+    ln.setAttribute('opacity', isMid ? 0.95 : 0.7);
+    g.appendChild(ln);
+    if (y % 10 === 0) {
+      const display = y <= 35 ? y : 70 - y;
+      [7, 46].forEach(ty => {
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('class', 'yard-text');
+        t.setAttribute('x', x); t.setAttribute('y', ty);
+        t.setAttribute('text-anchor', 'middle');
+        // Store pivot for flip transform
+        t.dataset.px = x;
+        t.dataset.py = ty;
+        t.textContent = display;
+        g.appendChild(t);
+      });
+    }
+  }
+}
+function drawHashMarks() {
+  const g = document.getElementById('hashMarks');
+  for (let y = 1; y <= 69; y++) {
+    if (y % 5 === 0) continue;
+    const x = 8.88 + y * YARD;
+    [13, 40].forEach(hy => {
+      const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      ln.setAttribute('x1', x); ln.setAttribute('y1', hy - 0.5);
+      ln.setAttribute('x2', x); ln.setAttribute('y2', hy + 0.5);
+      ln.setAttribute('stroke', '#f4f1ea');
+      ln.setAttribute('stroke-width', 0.12);
+      ln.setAttribute('opacity', 0.5);
+      g.appendChild(ln);
+    });
+  }
+}
+
+//=========================================================================
+// LOS / RUSH LINE
+//=========================================================================
+function losXSvg() { return 8.88 + losYards * YARD; }
+function rushXSvg() {
+  // Rush line is 7y on the defense's side of the LOS. Since we now physically
+  // mirror player positions on flip, we mirror the rush line direction too.
+  const dir = flipped ? -1 : 1;
+  return losXSvg() + dir * 7 * YARD;
+}
+function updateLos() {
+  // LOS line position (% of field-wrap width)
+  const losPct = (losXSvg() / FIELD_W) * 100;
+  losLine.style.left = losPct + '%';
+  losGrip.style.left = losPct + '%';
+  // Rush line in SVG
+  const rx = rushXSvg();
+  rushLineEl.setAttribute('x1', rx); rushLineEl.setAttribute('y1', 2);
+  rushLineEl.setAttribute('x2', rx); rushLineEl.setAttribute('y2', 51);
+  updateCapBoxes();
+  applyCamera();
+}
+
+function updatePlayNameLabel() {
+  try {
+    const g = document.getElementById('playNameLabel');
+    if (!g) return;
+    g.innerHTML = '';
+    if (!currentPlayName) {
+      g.style.display = 'none';
+      return;
+    }
+    g.style.display = '';
+    const dir = flipped ? -1 : 1;
+    const xPos = losXSvg() + dir * (20 * YARD + 2.5);
+    const yPos = 26.5;
+
+    const ns = 'http://www.w3.org/2000/svg';
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', xPos);
+    t.setAttribute('y', yPos);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('font-size', '2.2');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('font-family', 'Arial, sans-serif');
+    t.setAttribute('letter-spacing', '0.12em');
+    t.setAttribute('fill', '#111');
+    t.setAttribute('stroke', '#fff');
+    t.setAttribute('stroke-width', '0.6');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('transform', 'rotate(' + (flipped ? -90 : 90) + ' ' + xPos + ' ' + yPos + ')');
+    // Display the name; if the play has been L/R-mirrored, swap any ISOLATED
+    // L↔R (whole-word, standing for Left/Right). Letters inside words are left
+    // alone. Word boundaries are spaces, string ends, and hyphens.
+    let displayName = String(currentPlayName);
+    if (playNameFlipped) {
+      displayName = displayName.replace(/(^|[\s\-])([LR])(?=$|[\s\-])/g,
+        (m, pre, letter) => pre + (letter === 'L' ? 'R' : 'L'));
+    }
+    t.textContent = displayName.toUpperCase();
+    g.appendChild(t);
+  } catch (e) {
+    // Silently ignore — label is non-essential
+  }
+}
+
+function updateCapBoxes() {
+  updatePlayNameLabel();
+  const g = document.getElementById('capBoxes');
+  if (!g) return;
+  g.innerHTML = '';
+  if (!capBoxesOn) {
+    g.style.display = 'none';
+    return;
+  }
+  g.style.display = '';
+
+  // Grid: 3 across (width) × 3 deep (along field). 20y forward of LOS, full width.
+  const widthBoxes = 3;
+  const depthBoxes = 3;
+  const totalDepth_svg = 20 * YARD;
+  const totalWidth_svg = FIELD_H;
+  const depthStep = totalDepth_svg / depthBoxes;
+  const widthStep = totalWidth_svg / widthBoxes;
+
+  // Direction of "forward" depends on flip state.
+  // Not flipped: offense moves toward +x; boxes extend from LOS to LOS+20y
+  // Flipped: offense moves toward -x; boxes extend from LOS-20y to LOS
+  const dir = flipped ? -1 : 1;
+  const x0 = losXSvg() + (dir < 0 ? -totalDepth_svg : 0);
+  const y0 = 0;
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const stroke = '#e64545';
+  const strokeWidth = 0.18;
+
+  // 1) Render filled cells FIRST (so the lines on top look crisp).
+  // Each cell is a tappable rect.
+  for (let row = 0; row < widthBoxes; row++) {
+    for (let col = 0; col < depthBoxes; col++) {
+      const key = `${row},${col}`;
+      const fill = capBoxFills[key];
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x0 + col * depthStep);
+      rect.setAttribute('y', y0 + row * widthStep);
+      rect.setAttribute('width', depthStep);
+      rect.setAttribute('height', widthStep);
+      rect.setAttribute('fill', fill || 'transparent');
+      rect.setAttribute('fill-opacity', fill ? 0.3 : 0);
+      rect.setAttribute('stroke', 'none');
+      rect.style.cursor = 'pointer';
+      rect.dataset.row = row;
+      rect.dataset.col = col;
+      // Long-press handler
+      attachLongPress(rect, (e) => openCapBoxPicker(row, col, e));
+      g.appendChild(rect);
+    }
+  }
+
+  // 2) Inner grid lines on top (skip outer borders)
+  for (let i = 1; i < depthBoxes; i++) {
+    const x = x0 + i * depthStep;
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1', x); ln.setAttribute('y1', y0);
+    ln.setAttribute('x2', x); ln.setAttribute('y2', y0 + totalWidth_svg);
+    ln.setAttribute('stroke', stroke);
+    ln.setAttribute('stroke-width', strokeWidth);
+    ln.setAttribute('opacity', 0.95);
+    ln.style.pointerEvents = 'none';
+    g.appendChild(ln);
+  }
+  for (let i = 1; i < widthBoxes; i++) {
+    const y = y0 + i * widthStep;
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1', x0);                  ln.setAttribute('y1', y);
+    ln.setAttribute('x2', x0 + totalDepth_svg); ln.setAttribute('y2', y);
+    ln.setAttribute('stroke', stroke);
+    ln.setAttribute('stroke-width', strokeWidth);
+    ln.setAttribute('opacity', 0.95);
+    ln.style.pointerEvents = 'none';
+    g.appendChild(ln);
+  }
+}
+
+// Generic long-press helper for an element. Fires `onLongPress(event)` if held >500ms
+// without moving > a few px. Cancels on move/leave.
+function attachLongPress(el, onLongPress, ms = 500) {
+  let timer = null;
+  let startPt = null;
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } startPt = null; };
+  const start = (e) => {
+    cancel();
+    e.stopPropagation();
+    const pt = (e.touches && e.touches[0]) || e;
+    startPt = { x: pt.clientX, y: pt.clientY };
+    timer = setTimeout(() => {
+      timer = null;
+      onLongPress(e);
+    }, ms);
+  };
+  const move = (e) => {
+    if (!startPt) return;
+    const pt = (e.touches && e.touches[0]) || e;
+    if (Math.hypot(pt.clientX - startPt.x, pt.clientY - startPt.y) > 8) cancel();
+  };
+  el.addEventListener('touchstart', start, { passive: false });
+  el.addEventListener('touchmove', move, { passive: true });
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchcancel', cancel);
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mousemove', move);
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+}
+
+// ---- Cap box color picker ----
+function openCapBoxPicker(row, col, e) {
+  // Player colors used in defaults: red, yellow, green, blue, plus none/clear
+  const COLORS = [
+    { name: 'Red',    hex: '#ff4444' },
+    { name: 'Yellow', hex: '#ffd84d' },
+    { name: 'Green',  hex: '#7ed957' },
+    { name: 'Blue',   hex: '#4a90e2' },
+    { name: 'Orange', hex: '#ff6b35' },
+    { name: 'Purple', hex: '#a78bfa' },
+  ];
+  const key = `${row},${col}`;
+  const current = capBoxFills[key];
+  const swatches = COLORS.map(c => `
+    <div class="cap-swatch ${current && current.toLowerCase() === c.hex.toLowerCase() ? 'selected' : ''}"
+         style="background:${c.hex}" data-color="${c.hex}" title="${c.name}"></div>
+  `).join('');
+  openModal('Box Color', `
+    <p style="color:var(--text-dim);font-size:11px;margin-bottom:12px;">
+      Pick a color to fill this box (30% transparent), or clear it.
+    </p>
+    <div class="cap-swatch-grid">${swatches}</div>
+    <button class="cap-clear-btn" id="capClearBtn">Clear Color</button>
+  `, { hideConfirm: true });
+
+  // Wire up swatch taps
+  modalBody.querySelectorAll('.cap-swatch').forEach(el => {
+    el.addEventListener('click', () => {
+      capBoxFills[key] = el.dataset.color;
+      updateCapBoxes();
+      closeModal();
+    });
+  });
+  modalBody.querySelector('#capClearBtn').addEventListener('click', () => {
+    delete capBoxFills[key];
+    updateCapBoxes();
+    closeModal();
+  });
+}
+
+//=========================================================================
+// CAMERA — show a 40y window around the LOS (or whole field if camera off)
+//=========================================================================
+function updateTextOrientation() {
+  // In vertical mode, the wrap is rotated -90°. Counter-rotate yard text so
+  // digits read upright. When flipped, the wrap also has a horizontal mirror,
+  // so we adjust the rotation direction accordingly.
+  document.querySelectorAll('.yard-text').forEach(t => {
+    const px = parseFloat(t.dataset.px);
+    const py = parseFloat(t.dataset.py);
+    // Counter-rotation: in vertical mode, rotate +90° (or -90° if flipped) around (px,py)
+    const angle = flipped ? -90 : 90;
+    t.setAttribute('transform', `rotate(${angle} ${px} ${py})`);
+  });
+}
+
+function applyCamera() {
+  fieldWrap.style.transform = '';
+  fieldWrap.style.width = '';
+  fieldWrap.style.height = '';
+
+  const vp = fieldViewport.getBoundingClientRect();
+  if (!vp.width || !vp.height) return;
+
+  const STRETCH_X = stretched ? 1.4 : 1.0;
+
+  // VERTICAL ORIENTATION: SVG world is FIELD_W=80 along play axis × FIELD_H=53
+  // sideline-to-sideline. We rotate the wrap -90° so the play axis is VERTICAL
+  // on screen (offense moves UP from bottom to top). FIELD_H becomes screen-x,
+  // FIELD_W becomes screen-y. STRETCH_X stretches along play axis (now vertical).
+
+  // Compute camera window along the play axis (svg x coords)
+  let cameraStart_svg, cameraEnd_svg, cameraSpan_svg;
+  if (cameraFollowsLos) {
+    const cameraW_svg = CAMERA_TOTAL_YARDS * YARD;
+    const biasFraction = CAMERA_YARDS_BEHIND_LOS / CAMERA_TOTAL_YARDS;
+    // When flipped, the LOS sits at the top instead of bottom of view
+    const losBias = flipped ? (1 - biasFraction) : biasFraction;
+    let s = losXSvg() - losBias * cameraW_svg;
+    const overshoot = CAMERA_YARDS_AHEAD_LOS * YARD;
+    s = Math.max(-overshoot, Math.min(FIELD_W - cameraW_svg + overshoot, s));
+    cameraStart_svg = s;
+    cameraEnd_svg = s + cameraW_svg;
+    cameraSpan_svg = cameraW_svg;
+  } else {
+    cameraStart_svg = 0;
+    cameraEnd_svg = FIELD_W;
+    cameraSpan_svg = FIELD_W;
+  }
+
+  // Fill the viewport WIDTH (sideline-to-sideline) — most important for showing
+  // proper spacing along the LOS. The vertical extent (route depth) gets
+  // whatever pixels it gets at that scale; camera-follow keeps LOS at the
+  // right vertical position with 10y behind and 30y of route ahead visible.
+  const scale = vp.width / FIELD_H;
+
+  // The wrap's natural size: 1:1 svg-to-px scale (no STRETCH baked in).
+  // STRETCH_X gets applied via a scaleX in the transform chain, which scales
+  // the entire wrap content (yard lines, hash marks, end zones, tokens, routes).
+  const wrapW = FIELD_W * scale;
+  const wrapH = FIELD_H * scale;
+  fieldWrap.style.width  = wrapW + 'px';
+  fieldWrap.style.height = wrapH + 'px';
+
+  // Camera window screen size (after STRETCH_X applied):
+  const camScreenW = FIELD_H * scale;
+  const camScreenH = cameraSpan_svg * STRETCH_X * scale;
+  const padX = (vp.width - camScreenW) / 2;
+  // LOS target on screen:
+  //   not flipped: offense moves UP, LOS sits 25% from BOTTOM (vp.height * 0.75)
+  //   flipped: offense moves DOWN, LOS sits 25% from TOP (vp.height * 0.25)
+  const losBiasFraction = CAMERA_YARDS_BEHIND_LOS / CAMERA_TOTAL_YARDS; // 0.25
+  const losTargetScreenY = cameraFollowsLos
+    ? (flipped ? vp.height * losBiasFraction : vp.height * (1 - losBiasFraction))
+    : vp.height / 2;
+
+  let tx = padX;
+  let ty;
+  if (cameraFollowsLos) {
+    ty = losTargetScreenY + losXSvg() * scale * STRETCH_X;
+  } else {
+    const fullFieldScreenH = FIELD_W * STRETCH_X * scale;
+    const padY = Math.max(0, (vp.height - fullFieldScreenH) / 2);
+    ty = vp.height - padY;
+  }
+  // Transform chain (right-to-left effect):
+  //   1. scaleX(STRETCH_X) stretches play-axis (svg x-axis)
+  //   2. rotate(-90deg) so play axis points up on screen
+  //   3. translate to position
+  // Flip is now handled by mirroring player/route positions directly, so no
+  // additional transform needed here.
+  const transform = `translate(${tx}px, ${ty}px) rotate(-90deg) scaleX(${STRETCH_X})`;
+
+  fieldWrap.style.top  = '0';
+  fieldWrap.style.left = '0';
+  fieldWrap.style.transform = transform;
+  fieldWrap.style.setProperty('--inv-stretch', String(1 / STRETCH_X));
+  fieldWrap.style.setProperty('--stretch', String(STRETCH_X));
+  fieldWrap.style.setProperty('--token-aspect', String(1 / STRETCH_X));
+  fieldWrap.classList.toggle('stretched', stretched);
+  fieldWrap.classList.add('vertical');
+  updateTextOrientation();
+}
+
+window.addEventListener('resize', applyCamera);
+
+//=========================================================================
+// DEFAULT FORMATION
+//=========================================================================
+function loadDefault() {
+  players = [];
+  routes = [];
+  selectedId = null;
+  selectedRouteId = null;
+  losYards = 35;
+  loadDefaultOffense();
+  render();
+  renderRoutes();
+  updateLos();
+}
+
+function loadDefaultOffense() {
+  // Removes any existing offense, then drops the Twins Right Shotgun
+  players = players.filter(p => p.side !== 'offense');
+  // Also drop their routes
+  routes = routes.filter(r => {
+    const owner = players.find(p => p.id === r.ownerId);
+    return owner && owner.side !== 'offense';
+  });
+  const losX = losXSvg();
+  // C on LOS, middle of field — LOS handle (blue)
+  addPlayer('offense', losX,            26.5, 'C',  '#4a90e2', true);
+  // QB 6 yards behind C in shotgun (black)
+  addPlayer('offense', losX - 6 * YARD, 26.5, 'QB', '#1a1a1a');
+  // Twins to the RIGHT (top of screen): Z red, Y yellow
+  addPlayer('offense', losX,            12,   'Z',  '#ff4444');
+  addPlayer('offense', losX,            18,   'Y',  '#ffd84d');
+  // Backside X on the LEFT (bottom of screen): green
+  addPlayer('offense', losX,            41,   'X',  '#7ed957');
+}
+
+function loadDefaultDefense() {
+  // Cover 3 / 1-high look: 2 CBs inside-shade of WRs, 2 LB seams, 1 high S
+  // Removes any existing defense first.
+  players = players.filter(p => p.side !== 'defense');
+  routes = routes.filter(r => {
+    const owner = players.find(p => p.id === r.ownerId);
+    return owner && owner.side !== 'defense';
+  });
+  const losX = losXSvg();
+  addPlayer('defense', losX + 7 * YARD,  12,   'CB', '#4a90e2');
+  addPlayer('defense', losX + 7 * YARD,  41,   'CB', '#4a90e2');
+  addPlayer('defense', losX + 7 * YARD,  19,   'LB', '#4a90e2');
+  addPlayer('defense', losX + 7 * YARD,  34,   'LB', '#4a90e2');
+  addPlayer('defense', losX + 10 * YARD, 26.5, 'S',  '#4a90e2');
+}
+
+function addPlayer(side, x, y, label, color, isLosHandle) {
+  players.push({ id: nextId++, side, x, y, label, color, isLosHandle: !!isLosHandle });
+}
+
+//=========================================================================
+// RENDER
+//=========================================================================
+function render() {
+  playerLayer.innerHTML = '';
+  // Compute pixel size so tokens render as TRUE circles on screen.
+  // The wrap is rotated -90° and scaleX(STRETCH_X). A pre-rotation token of
+  // width Wpx, height Hpx becomes screen-x = Hpx, screen-y = Wpx*STRETCH_X.
+  // For a circle: Wpx*STRETCH_X = Hpx → Wpx = Hpx/STRETCH_X.
+  const STRETCH_X_render = stretched ? 1.4 : 1.0;
+  const wrapRect = fieldWrap.getBoundingClientRect();
+  // Wrap rect AFTER transforms — its width is the post-transform screen-x extent,
+  // which equals FIELD_H × scale (sideline-to-sideline). Use that to derive scale.
+  const scale = wrapRect.width / FIELD_H;
+  const tokenScreenSize = 46; // ~46 px on screen to fit larger labels
+  // pre-rotation height (will become screen-y after stretch and rotate):
+  const Hpx = tokenScreenSize / STRETCH_X_render;
+  // pre-rotation width (will become screen-x after rotate):
+  const Wpx = tokenScreenSize;
+
+  players.forEach(p => {
+    const el = document.createElement('div');
+    let cls = 'token ' + p.side;
+    if (p.id === selectedId) cls += ' selected';
+    if (p.isLosHandle) cls += ' los-handle';
+    el.className = cls;
+    el.dataset.id = p.id;
+    el.style.background = p.color;
+    el.style.color = colorLum(p.color) > 0.6 ? '#000' : '#fff';
+    el.style.left = (p.x / FIELD_W * 100) + '%';
+    el.style.top  = (p.y / FIELD_H * 100) + '%';
+    el.style.width  = Wpx + 'px';
+    el.style.height = Hpx + 'px';
+    el.style.aspectRatio = 'auto';
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'token-label';
+    labelSpan.textContent = p.label || '';
+    el.appendChild(labelSpan);
+    playerLayer.appendChild(el);
+  });
+  updateInspector();
+  updatePlayerSelect();
+}
+
+function updatePlayerSelect() {
+  const sel = document.getElementById('playerSelect');
+  if (!sel) return;
+  // Build options: offense first, then defense
+  const off = players.filter(p => p.side === 'offense');
+  const def = players.filter(p => p.side === 'defense');
+  let html = '<option value="">Select player…</option>';
+  if (off.length) {
+    html += '<optgroup label="Offense">';
+    off.forEach(p => {
+      html += `<option value="${p.id}">${escapeHtmlAttr(p.label || '?')}</option>`;
+    });
+    html += '</optgroup>';
+  }
+  if (def.length) {
+    html += '<optgroup label="Defense">';
+    def.forEach(p => {
+      html += `<option value="${p.id}">${escapeHtmlAttr(p.label || '?')}</option>`;
+    });
+    html += '</optgroup>';
+  }
+  sel.innerHTML = html;
+  sel.value = selectedId !== null ? String(selectedId) : '';
+}
+
+function escapeHtmlAttr(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function updateTokenPosition(id) {
+  const p = players.find(pl => pl.id === id);
+  if (!p) return;
+  const el = playerLayer.querySelector(`[data-id="${id}"]`);
+  if (!el) return;
+  el.style.left = (p.x / FIELD_W * 100) + '%';
+  el.style.top  = (p.y / FIELD_H * 100) + '%';
+}
+
+function colorLum(hex) {
+  const c = hex.replace('#','');
+  const r = parseInt(c.substr(0,2),16)/255;
+  const g = parseInt(c.substr(2,2),16)/255;
+  const b = parseInt(c.substr(4,2),16)/255;
+  return 0.299*r + 0.587*g + 0.114*b;
+}
+
+//=========================================================================
+// ROUTES — drawing, smoothing/segmenting, rendering
+//=========================================================================
+
+// Reduce noisy raw points (Ramer–Douglas–Peucker)
+function rdp(points, epsilon) {
+  if (points.length < 3) return points.slice();
+  const first = points[0], last = points[points.length - 1];
+  let maxDist = 0, idx = 0;
+  for (let i = 1; i < points.length - 1; i++) {
+    const d = perpDist(points[i], first, last);
+    if (d > maxDist) { maxDist = d; idx = i; }
+  }
+  if (maxDist > epsilon) {
+    const left = rdp(points.slice(0, idx + 1), epsilon);
+    const right = rdp(points.slice(idx), epsilon);
+    return left.slice(0, -1).concat(right);
+  }
+  return [first, last];
+}
+function perpDist(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  if (dx === 0 && dy === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx*dx + dy*dy);
+  const tx = a.x + t * dx, ty = a.y + t * dy;
+  return Math.hypot(p.x - tx, p.y - ty);
+}
+
+// Walk a simplified path and decide: is this a sharp-cornered route (segments)
+// or a smooth curve? A real "sharp" route has 1-2 sharp corners separating
+// otherwise straight runs. A curve has many small turns and no big sharp ones.
+function classifyPath(simplified) {
+  if (simplified.length <= 2) {
+    return { type: 'segments', vertices: simplified.slice() };
+  }
+
+  // Compute turn angles at each interior point
+  const turns = [];
+  for (let i = 1; i < simplified.length - 1; i++) {
+    const p0 = simplified[i-1], p1 = simplified[i], p2 = simplified[i+1];
+    const a1 = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const a2 = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    let turn = Math.abs(a2 - a1);
+    if (turn > Math.PI) turn = 2*Math.PI - turn;
+    turns.push(turn);
+  }
+
+  // Count "really sharp" corners (>= 60°). These are unambiguous breaks.
+  const SHARP = Math.PI / 3;        // 60°
+  const sharpCount = turns.filter(t => t >= SHARP).length;
+
+  // If there are 1-2 really sharp corners and the rest are gentle, it's a
+  // segmented route. Use only the sharp corners as break points (plus endpoints).
+  if (sharpCount >= 1 && sharpCount <= 3) {
+    const corners = [0];
+    for (let i = 0; i < turns.length; i++) {
+      if (turns[i] >= SHARP) corners.push(i + 1);
+    }
+    corners.push(simplified.length - 1);
+    return { type: 'segments', vertices: corners.map(i => simplified[i]) };
+  }
+
+  // Otherwise: smooth curve. Keep the simplified path as a curve.
+  return { type: 'curve', vertices: simplified.slice() };
+}
+
+// Build SVG path 'd' from a classified route. For curves, use Catmull-Rom -> bezier.
+function pathDFromRoute(route) {
+  const pts = route.points;
+  if (pts.length < 2) return '';
+  if (route.smoothed === false || pts.length === 2) {
+    // Plain segments
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
+    return d;
+  }
+  // Smooth curve via Catmull-Rom
+  return catmullRomPath(pts);
+}
+function catmullRomPath(pts) {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i-1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i+1];
+    const p3 = pts[i+2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
+// Build an arrowhead triangle at the end of the path, oriented along the last segment.
+function arrowAtEnd(pts, color) {
+  if (pts.length < 2) return '';
+  const last = pts[pts.length - 1];
+  const prev = pts[pts.length - 2];
+  const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
+  const size = 1.8;
+  // Tip extends beyond the line's endpoint by `size` units along the direction.
+  const tipX = last.x + size * Math.cos(ang);
+  const tipY = last.y + size * Math.sin(ang);
+  // Base wings are perpendicular to the line, sitting at the line's endpoint.
+  const halfW = size * 0.55;
+  const x2 = last.x + halfW * Math.cos(ang + Math.PI / 2);
+  const y2 = last.y + halfW * Math.sin(ang + Math.PI / 2);
+  const x3 = last.x + halfW * Math.cos(ang - Math.PI / 2);
+  const y3 = last.y + halfW * Math.sin(ang - Math.PI / 2);
+  return `M ${tipX} ${tipY} L ${x2} ${y2} L ${x3} ${y3} Z`;
+}
+
+function renderRoutes() {
+  routesGroup.innerHTML = '';
+  routes.forEach(r => {
+    const owner = players.find(p => p.id === r.ownerId);
+    if (!owner) return;
+    const pts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+    const color = owner.color;
+    const isSelected = r.id === selectedRouteId;
+
+    // For segment-based routes, render each segment as its own clickable path
+    if (!r.smoothed) {
+      const trimmed = trimPathEnd(pts, 0.3);
+      for (let i = 0; i < trimmed.length - 1; i++) {
+        const a = trimmed[i];
+        const b = trimmed[i + 1];
+        const seg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let cls = 'route-path';
+        if (isSelected) cls += ' selected';
+        if (isSelected && selectedSegmentIdx === i) cls += ' segment-selected';
+        seg.setAttribute('class', cls);
+        seg.setAttribute('d', `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
+        seg.setAttribute('stroke', isSelected && selectedSegmentIdx === i ? '#fff' : color);
+        seg.dataset.routeId = r.id;
+        seg.dataset.segIdx = i;
+        seg.addEventListener('click', (e) => onSegmentClick(e, r.id, i));
+        seg.addEventListener('touchend', (e) => onSegmentClick(e, r.id, i), { passive: false });
+        routesGroup.appendChild(seg);
+      }
+      // Arrowhead at the END point — skip if route has option branches
+      if (!r.branches || r.branches.length === 0) {
+        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrow.setAttribute('class', 'route-arrow');
+        arrow.setAttribute('d', arrowAtEnd(pts, color));
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('stroke', color);
+        arrow.setAttribute('stroke-width', 0.15);
+        arrow.setAttribute('stroke-linejoin', 'round');
+        routesGroup.appendChild(arrow);
+      }
+    } else {
+      // Smoothed curve: single path
+      const trimmed = trimPathEnd(pts, 0.3);
+      const d = pathDFromRoute({ ...r, points: trimmed });
+      if (!d) return;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', 'route-path' + (isSelected ? ' selected' : ''));
+      path.setAttribute('d', d);
+      path.setAttribute('stroke', color);
+      path.dataset.routeId = r.id;
+      path.addEventListener('click', (e) => onRouteClick(e, r.id));
+      path.addEventListener('touchend', (e) => onRouteClick(e, r.id), { passive: false });
+      routesGroup.appendChild(path);
+      if (!r.branches || r.branches.length === 0) {
+        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrow.setAttribute('class', 'route-arrow');
+        arrow.setAttribute('d', arrowAtEnd(pts, color));
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('stroke', color);
+        arrow.setAttribute('stroke-width', 0.15);
+        arrow.setAttribute('stroke-linejoin', 'round');
+        routesGroup.appendChild(arrow);
+      }
+
+      // Waypoint dots when selected — for fine-tuning curve shape
+      if (isSelected) {
+        for (let i = 1; i < pts.length; i++) {
+          const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          dot.setAttribute('cx', pts[i].x);
+          dot.setAttribute('cy', pts[i].y);
+          dot.setAttribute('r', 0.9);
+          dot.setAttribute('class', 'route-waypoint' +
+            (selectedWaypointIdx === i ? ' wp-selected' : ''));
+          dot.setAttribute('fill', selectedWaypointIdx === i ? '#fff' : color);
+          dot.setAttribute('stroke', '#000');
+          dot.setAttribute('stroke-width', 0.15);
+          const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          hit.setAttribute('cx', pts[i].x);
+          hit.setAttribute('cy', pts[i].y);
+          hit.setAttribute('r', 2.5);
+          hit.setAttribute('fill', 'transparent');
+          hit.style.cursor = 'pointer';
+          hit.style.pointerEvents = 'all';
+          hit.addEventListener('click', (e) => onWaypointClick(e, r.id, i));
+          hit.addEventListener('touchend', (e) => onWaypointClick(e, r.id, i), { passive: false });
+          routesGroup.appendChild(dot);
+          routesGroup.appendChild(hit);
+        }
+      }
+    }
+
+    // Render option-route BRANCHES (dashed lines from route endpoint)
+    if (r.branches && r.branches.length > 0) {
+      const endPt = pts[pts.length - 1];
+      r.branches.forEach((branch, bi) => {
+        if (!branch.points || branch.points.length < 1) return;
+        const branchPts = [endPt, ...branch.points];
+        const trimmed = trimPathEnd(branchPts, 0.3);
+        // Each branch segment is tappable for adjustment
+        for (let i = 0; i < trimmed.length - 1; i++) {
+          const a = trimmed[i];
+          const b = trimmed[i + 1];
+          const seg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          let cls = 'route-path route-branch';
+          const isThisSelected = isSelected
+            && selectedBranchIdx === bi
+            && selectedSegmentIdx === i
+            && selectedSegmentIsBranch;
+          if (isThisSelected) cls += ' segment-selected';
+          seg.setAttribute('class', cls);
+          seg.setAttribute('d', `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
+          seg.setAttribute('stroke', isThisSelected ? '#fff' : color);
+          seg.setAttribute('stroke-dasharray', '0.8 1.2');
+          seg.addEventListener('click', (e) => onBranchSegmentClick(e, r.id, bi, i));
+          seg.addEventListener('touchend', (e) => onBranchSegmentClick(e, r.id, bi, i), { passive: false });
+          routesGroup.appendChild(seg);
+        }
+        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrow.setAttribute('class', 'route-arrow');
+        arrow.setAttribute('d', arrowAtEnd(branchPts, color));
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('stroke', color);
+        arrow.setAttribute('stroke-width', 0.15);
+        arrow.setAttribute('stroke-linejoin', 'round');
+        routesGroup.appendChild(arrow);
+      });
+    }
+  });
+  updateSegmentAdjustUi();
+}
+
+function onSegmentClick(e, routeId, segIdx) {
+  e.stopPropagation();
+  if (e.cancelable) e.preventDefault();
+  if (selectedRouteId === routeId && selectedSegmentIdx === segIdx && !selectedSegmentIsBranch) {
+    selectedSegmentIdx = null;
+  } else {
+    selectedRouteId = routeId;
+    selectedSegmentIdx = segIdx;
+    selectedWaypointIdx = null;
+    selectedBranchIdx = null;
+    selectedSegmentIsBranch = false;
+  }
+  renderRoutes();
+}
+
+function onBranchSegmentClick(e, routeId, branchIdx, segIdx) {
+  e.stopPropagation();
+  if (e.cancelable) e.preventDefault();
+  if (selectedRouteId === routeId &&
+      selectedBranchIdx === branchIdx &&
+      selectedSegmentIdx === segIdx &&
+      selectedSegmentIsBranch) {
+    selectedSegmentIdx = null;
+    selectedBranchIdx = null;
+    selectedSegmentIsBranch = false;
+  } else {
+    selectedRouteId = routeId;
+    selectedBranchIdx = branchIdx;
+    selectedSegmentIdx = segIdx;
+    selectedSegmentIsBranch = true;
+    selectedWaypointIdx = null;
+  }
+  renderRoutes();
+}
+
+function onWaypointClick(e, routeId, wpIdx) {
+  e.stopPropagation();
+  if (e.cancelable) e.preventDefault();
+  if (selectedRouteId === routeId && selectedWaypointIdx === wpIdx) {
+    selectedWaypointIdx = null;
+  } else {
+    selectedRouteId = routeId;
+    selectedWaypointIdx = wpIdx;
+    selectedSegmentIdx = null;
+  }
+  renderRoutes();
+}
+
+function rotateSelectedSegment(degrees) {
+  if (selectedRouteId === null || selectedSegmentIdx === null) return;
+  const r = routes.find(rt => rt.id === selectedRouteId);
+  if (!r) return;
+  const owner = players.find(p => p.id === r.ownerId);
+  if (!owner) return;
+
+  if (selectedSegmentIsBranch) {
+    if (selectedBranchIdx === null || !r.branches || !r.branches[selectedBranchIdx]) return;
+    const branch = r.branches[selectedBranchIdx];
+    const parentPts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+    const anchor = parentPts[parentPts.length - 1];
+    const pts = [anchor, ...branch.points];
+    const pivot = pts[selectedSegmentIdx];
+    const rad = degrees * Math.PI / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    for (let i = selectedSegmentIdx + 1; i < pts.length; i++) {
+      const dx = pts[i].x - pivot.x;
+      const dy = pts[i].y - pivot.y;
+      pts[i] = {
+        x: pivot.x + dx * cos - dy * sin,
+        y: pivot.y + dx * sin + dy * cos,
+      };
+    }
+    branch.points = pts.slice(1);
+    renderRoutes();
+    return;
+  }
+
+  const pts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+  const pivot = pts[selectedSegmentIdx];
+  const rad = degrees * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  for (let i = selectedSegmentIdx + 1; i < pts.length; i++) {
+    const dx = pts[i].x - pivot.x;
+    const dy = pts[i].y - pivot.y;
+    pts[i] = {
+      x: pivot.x + dx * cos - dy * sin,
+      y: pivot.y + dx * sin + dy * cos,
+    };
+  }
+  r.points = [pts[0], ...pts.slice(1)];
+  renderRoutes();
+}
+
+function lengthenSelectedSegment(yards) {
+  if (selectedRouteId === null || selectedSegmentIdx === null) return;
+  const r = routes.find(rt => rt.id === selectedRouteId);
+  if (!r) return;
+  const owner = players.find(p => p.id === r.ownerId);
+  if (!owner) return;
+
+  if (selectedSegmentIsBranch) {
+    if (selectedBranchIdx === null || !r.branches || !r.branches[selectedBranchIdx]) return;
+    const branch = r.branches[selectedBranchIdx];
+    const parentPts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+    const anchor = parentPts[parentPts.length - 1];
+    const pts = [anchor, ...branch.points];
+    const segStart = pts[selectedSegmentIdx];
+    const segEnd = pts[selectedSegmentIdx + 1];
+    if (!segEnd) return;
+    const dx = segEnd.x - segStart.x;
+    const dy = segEnd.y - segStart.y;
+    const len = Math.hypot(dx, dy);
+    if (len === 0) return;
+    const newLen = len + yards * YARD;
+    if (newLen < 0.5 * YARD) return;
+    const ux = dx / len, uy = dy / len;
+    const offsetX = ux * yards * YARD;
+    const offsetY = uy * yards * YARD;
+    for (let i = selectedSegmentIdx + 1; i < pts.length; i++) {
+      pts[i] = { x: pts[i].x + offsetX, y: pts[i].y + offsetY };
+    }
+    branch.points = pts.slice(1);
+    renderRoutes();
+    return;
+  }
+
+  const pts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+  const segStart = pts[selectedSegmentIdx];
+  const segEnd = pts[selectedSegmentIdx + 1];
+  if (!segEnd) return;
+  const dx = segEnd.x - segStart.x;
+  const dy = segEnd.y - segStart.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return;
+  const newLen = len + yards * YARD;
+  if (newLen < 0.5 * YARD) return;
+  const ux = dx / len, uy = dy / len;
+  const offsetX = ux * yards * YARD;
+  const offsetY = uy * yards * YARD;
+  for (let i = selectedSegmentIdx + 1; i < pts.length; i++) {
+    pts[i] = { x: pts[i].x + offsetX, y: pts[i].y + offsetY };
+  }
+  r.points = [pts[0], ...pts.slice(1)];
+  renderRoutes();
+}
+
+// Nudge selected waypoint of a curve by 1 yard in screen direction
+function nudgeWaypoint(dx_yards, dy_yards) {
+  if (selectedRouteId === null || selectedWaypointIdx === null) return;
+  const r = routes.find(rt => rt.id === selectedRouteId);
+  if (!r) return;
+  if (selectedWaypointIdx < 1 || selectedWaypointIdx >= r.points.length) return;
+  let svgDx = dx_yards * YARD;
+  let svgDy = dy_yards * YARD;
+  if (flipped) { svgDx = -svgDx; svgDy = -svgDy; }
+  const wp = r.points[selectedWaypointIdx];
+  // Clamp to field
+  const m = 1.5;
+  r.points[selectedWaypointIdx] = {
+    x: Math.max(m, Math.min(FIELD_W - m, wp.x + svgDx)),
+    y: Math.max(m, Math.min(FIELD_H - m, wp.y + svgDy)),
+  };
+  renderRoutes();
+}
+
+function updateSegmentAdjustUi() {
+  const segPanel = document.getElementById('segAdjust');
+  const wpPanel = document.getElementById('wpAdjust');
+  if (!segPanel || !wpPanel) return;
+  const showSeg = selectedRouteId !== null && selectedSegmentIdx !== null;
+  const showWp  = selectedRouteId !== null && selectedWaypointIdx !== null;
+  segPanel.classList.toggle('open', showSeg);
+  wpPanel.classList.toggle('open', showWp);
+}
+
+// Pull the last point back along the final segment by `distance` svg units.
+function trimPathEnd(pts, distance) {
+  if (pts.length < 2) return pts;
+  const last = pts[pts.length - 1];
+  const prev = pts[pts.length - 2];
+  const dx = last.x - prev.x;
+  const dy = last.y - prev.y;
+  const len = Math.hypot(dx, dy);
+  if (len <= distance) {
+    // Last segment too short — just drop the last point and use prev as endpoint
+    return pts.slice(0, -1);
+  }
+  const t = (len - distance) / len;
+  const newLast = { x: prev.x + dx * t, y: prev.y + dy * t };
+  return [...pts.slice(0, -1), newLast];
+}
+
+function onRouteClick(e, routeId) {
+  e.stopPropagation();
+  if (e.cancelable) e.preventDefault();
+  selectedRouteId = routeId;
+  // Open inspector for that route's owner so the user can use Delete Route
+  const r = routes.find(rt => rt.id === routeId);
+  if (r) selectedId = r.ownerId;
+  render();
+  renderRoutes();
+}
+
+// Convert a touch/mouse client point to FIELD-WRAP SVG coordinates (0..80, 0..53),
+// accounting for flipped & zoomed transforms.
+function clientToFieldXY(clientX, clientY) {
+  const rect = fieldWrap.getBoundingClientRect();
+  let lx = clientX - rect.left;
+  let ly = clientY - rect.top;
+  // Wrap is rotated -90°: screen-x in rect maps to svg-y (sideline-to-sideline),
+  // screen-y inverted maps to svg-x (offense moves UP = lower screen-y).
+  let fy = (lx / rect.width)  * FIELD_H;
+  let fx = ((rect.height - ly) / rect.height) * FIELD_W;
+  return { x: fx, y: fy };
+}
+
+// Live preview (during drawing)
+let livePreviewPath = null;
+let livePreviewArrow = null;
+
+function startDrawingFrom(playerId, clientX, clientY) {
+  const p = players.find(pp => pp.id === playerId);
+  if (!p) return;
+  // If we're in branch mode (drawMode already set with isBranch), start from
+  // the parent route's endpoint instead of the player.
+  let startPt = { x: p.x, y: p.y };
+  if (drawMode && drawMode.isBranch) {
+    const parentRoute = routes.find(r => r.ownerId === playerId);
+    if (parentRoute && parentRoute.points.length > 0) {
+      const last = parentRoute.points[parentRoute.points.length - 1];
+      startPt = { x: last.x, y: last.y };
+    }
+  }
+  drawMode = {
+    ownerId: playerId,
+    raw: [startPt],
+    isBranch: drawMode && drawMode.isBranch || false,
+  };
+  livePreviewPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  livePreviewPath.setAttribute('class', 'route-path live');
+  livePreviewPath.setAttribute('stroke', p.color);
+  routesGroup.appendChild(livePreviewPath);
+  livePreviewArrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  livePreviewArrow.setAttribute('class', 'route-arrow');
+  livePreviewArrow.setAttribute('fill', p.color);
+  livePreviewArrow.setAttribute('stroke', p.color);
+  livePreviewArrow.setAttribute('stroke-width', 0.15);
+  routesGroup.appendChild(livePreviewArrow);
+}
+
+function extendDrawing(clientX, clientY) {
+  if (!drawMode) return;
+  const pt = clientToFieldXY(clientX, clientY);
+  const last = drawMode.raw[drawMode.raw.length - 1];
+  if (Math.hypot(pt.x - last.x, pt.y - last.y) < 0.4) return; // skip jitter
+
+  // While the finger is still over the player's token, keep the first point
+  // anchored at the player's center (don't add intermediate points yet).
+  // This prevents an ugly kink where the line goes "center → first finger spot → drag direction".
+  const owner = players.find(pp => pp.id === drawMode.ownerId);
+  if (owner && drawMode.raw.length === 1) {
+    const distFromOwner = Math.hypot(pt.x - owner.x, pt.y - owner.y);
+    const tokenRadius = FIELD_W * 0.025; // token is 5% wide → ~2.5% radius
+    if (distFromOwner < tokenRadius) {
+      // Still inside token — don't record yet
+      return;
+    }
+  }
+
+  drawMode.raw.push(pt);
+  // update live preview
+  let d = `M ${drawMode.raw[0].x} ${drawMode.raw[0].y}`;
+  for (let i = 1; i < drawMode.raw.length; i++) {
+    d += ` L ${drawMode.raw[i].x} ${drawMode.raw[i].y}`;
+  }
+  livePreviewPath.setAttribute('d', d);
+  livePreviewArrow.setAttribute('d', arrowAtEnd(drawMode.raw));
+}
+
+function finishDrawing() {
+  if (!drawMode) return;
+  const raw = drawMode.raw;
+  // Cleanup live preview
+  if (livePreviewPath) livePreviewPath.remove();
+  if (livePreviewArrow) livePreviewArrow.remove();
+  livePreviewPath = null;
+  livePreviewArrow = null;
+
+  if (raw.length < 2) {
+    cancelDrawing();
+    return;
+  }
+  // Simplify, then classify, then store the simplified vertices
+  const simplified = rdp(raw, 0.35);
+  const { type, vertices } = classifyPath(simplified);
+
+  const ownerId = drawMode.ownerId;
+  const isBranch = !!drawMode.isBranch;
+
+  if (isBranch) {
+    // Add as a new branch on the existing route for this player
+    const parentRoute = routes.find(r => r.ownerId === ownerId);
+    if (parentRoute) {
+      if (!parentRoute.branches) parentRoute.branches = [];
+      // Skip the first vertex (it's the anchor at the parent's endpoint)
+      parentRoute.branches.push({
+        points: vertices.slice(1),
+        smoothed: type === 'curve',
+      });
+    }
+  } else {
+    // Replace any existing route owned by this player
+    routes = routes.filter(r => r.ownerId !== ownerId);
+    routes.push({
+      id: nextRouteId++,
+      ownerId,
+      points: vertices,
+      smoothed: type === 'curve',
+      branches: [],
+    });
+  }
+
+  drawMode = null;
+  drawBanner.classList.remove('show');
+  renderRoutes();
+  updateInspector();
+  showHelper(isBranch ? "Option branch added" :
+    (type === 'curve' ? "Smooth route saved" : "Route saved (" + (vertices.length - 1) + " segments)"));
+}
+
+function cancelDrawing() {
+  drawMode = null;
+  if (livePreviewPath) livePreviewPath.remove();
+  if (livePreviewArrow) livePreviewArrow.remove();
+  livePreviewPath = null;
+  livePreviewArrow = null;
+  drawBanner.classList.remove('show');
+  renderRoutes();
+}
+
+function enterDrawMode(playerId, isBranch = false) {
+  // Replaced by step-builder: use startRouteBuilder or startBranchBuilder
+  if (isBranch) {
+    const r = routes.find(rt => rt.ownerId === playerId);
+    if (!r) {
+      showHelper("This player needs a route first");
+      return;
+    }
+    startBranchBuilder(r.id);
+  } else {
+    startRouteBuilder(playerId);
+  }
+}
+
+//=========================================================================
+// STEP-BUILDER ROUTE DRAWING (1 yard per tap)
+//=========================================================================
+let routeBuilder = null;  // { playerId, points, branchOfRouteId, lastDir, totalSteps }
+
+function clampX(x) { const m = 1.5; return Math.max(m, Math.min(FIELD_W - m, x)); }
+function clampY(y) { const m = 1.5; return Math.max(m, Math.min(FIELD_H - m, y)); }
+
+function hideHelper() {
+  const h = document.getElementById('helper');
+  if (h) h.classList.remove('show');
+}
+
+function startRouteBuilder(playerId) {
+  const p = players.find(pl => pl.id === playerId);
+  if (!p) return;
+  routeBuilder = {
+    playerId,
+    points: [{ x: p.x, y: p.y }],
+    branchOfRouteId: null,
+    lastDir: null,
+    totalSteps: 0,
+  };
+  // Replace any existing route for this player
+  routes = routes.filter(r => r.ownerId !== playerId);
+  // Hide UI
+  showInspector = false;
+  render();
+  document.getElementById('dpad').classList.remove('open');
+  document.getElementById('routeDpad').classList.add('open');
+  showHelper("Tap arrows to draw 1 yard at a time", 0);
+  renderRouteBuilder();
+  updateRouteBuilderCount();
+}
+
+function startBranchBuilder(routeId) {
+  const r = routes.find(rt => rt.id === routeId);
+  if (!r) return;
+  const owner = players.find(p => p.id === r.ownerId);
+  if (!owner) return;
+  const anchor = r.points[r.points.length - 1];
+  routeBuilder = {
+    playerId: r.ownerId,
+    points: [{ x: anchor.x, y: anchor.y }],
+    branchOfRouteId: routeId,
+    lastDir: null,
+    totalSteps: 0,
+  };
+  showInspector = false;
+  render();
+  document.getElementById('dpad').classList.remove('open');
+  document.getElementById('routeDpad').classList.add('open');
+  showHelper("Drawing option branch — tap arrows", 0);
+  renderRouteBuilder();
+  updateRouteBuilderCount();
+}
+
+function endRouteBuilder(commit) {
+  if (!routeBuilder) return;
+  document.getElementById('routeDpad').classList.remove('open');
+  hideHelper();
+  if (commit && routeBuilder.points.length >= 2) {
+    if (routeBuilder.branchOfRouteId !== null) {
+      const r = routes.find(rt => rt.id === routeBuilder.branchOfRouteId);
+      if (r) {
+        if (!r.branches) r.branches = [];
+        r.branches.push({
+          points: routeBuilder.points.slice(1),
+          smoothed: false,
+        });
+      }
+      showHelper("Option branch added");
+    } else {
+      routes.push({
+        id: nextRouteId++,
+        ownerId: routeBuilder.playerId,
+        points: routeBuilder.points,
+        smoothed: false,
+        branches: [],
+      });
+      showHelper("Route saved");
+    }
+    renderRoutes();
+  } else {
+    renderRoutes();
+  }
+  routeBuilder = null;
+  updateInspector();
+}
+
+function stepRoute(dx_yards, dy_yards) {
+  if (!routeBuilder) return;
+  let svgDx = dx_yards * YARD;
+  let svgDy = dy_yards * YARD;
+  if (flipped) { svgDx = -svgDx; svgDy = -svgDy; }
+
+  const last = routeBuilder.points[routeBuilder.points.length - 1];
+  const newDir = { dx: dx_yards, dy: dy_yards };
+  if (routeBuilder.lastDir &&
+      routeBuilder.lastDir.dx === newDir.dx &&
+      routeBuilder.lastDir.dy === newDir.dy &&
+      routeBuilder.points.length >= 2) {
+    // Same direction → extend last waypoint
+    routeBuilder.points[routeBuilder.points.length - 1] = {
+      x: clampX(last.x + svgDx),
+      y: clampY(last.y + svgDy),
+    };
+  } else {
+    // New direction → add waypoint
+    routeBuilder.points.push({
+      x: clampX(last.x + svgDx),
+      y: clampY(last.y + svgDy),
+    });
+  }
+  routeBuilder.lastDir = newDir;
+  routeBuilder.totalSteps = (routeBuilder.totalSteps || 0) + 1;
+  renderRouteBuilder();
+  updateRouteBuilderCount();
+}
+
+function undoLastStep() {
+  if (!routeBuilder) return;
+  if (routeBuilder.points.length <= 1) return;
+  if (!routeBuilder.lastDir) {
+    routeBuilder.points.pop();
+    return;
+  }
+  let svgDx = routeBuilder.lastDir.dx * YARD;
+  let svgDy = routeBuilder.lastDir.dy * YARD;
+  if (flipped) { svgDx = -svgDx; svgDy = -svgDy; }
+  const last = routeBuilder.points[routeBuilder.points.length - 1];
+  const prev = routeBuilder.points[routeBuilder.points.length - 2];
+  const segSvgLen = Math.hypot(last.x - prev.x, last.y - prev.y);
+  const stepSvgLen = Math.hypot(svgDx, svgDy);
+  if (segSvgLen <= stepSvgLen + 0.01) {
+    routeBuilder.points.pop();
+    if (routeBuilder.points.length >= 2) {
+      const p2 = routeBuilder.points[routeBuilder.points.length - 1];
+      const p1 = routeBuilder.points[routeBuilder.points.length - 2];
+      const ddx = p2.x - p1.x;
+      const ddy = p2.y - p1.y;
+      let signDx = Math.sign(ddx);
+      let signDy = Math.sign(ddy);
+      if (flipped) { signDx = -signDx; signDy = -signDy; }
+      routeBuilder.lastDir = { dx: signDx, dy: signDy };
+    } else {
+      routeBuilder.lastDir = null;
+    }
+  } else {
+    routeBuilder.points[routeBuilder.points.length - 1] = {
+      x: last.x - svgDx,
+      y: last.y - svgDy,
+    };
+  }
+  routeBuilder.totalSteps = Math.max(0, (routeBuilder.totalSteps || 1) - 1);
+  renderRouteBuilder();
+  updateRouteBuilderCount();
+}
+
+function updateRouteBuilderCount() {
+  const el = document.getElementById('rdCount');
+  if (!el || !routeBuilder) return;
+  el.textContent = (routeBuilder.totalSteps || 0) + 'y';
+}
+
+function renderRouteBuilder() {
+  const prevPreview = document.getElementById('routeBuilderPreview');
+  if (prevPreview) prevPreview.remove();
+  if (!routeBuilder || routeBuilder.points.length < 1) return;
+  const p = players.find(pl => pl.id === routeBuilder.playerId);
+  if (!p) return;
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.id = 'routeBuilderPreview';
+  if (routeBuilder.points.length >= 2) {
+    const pts = routeBuilder.points;
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', p.color);
+    path.setAttribute('stroke-width', 0.385);
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    g.appendChild(path);
+    // Arrow at end
+    const last = pts[pts.length - 1];
+    const prev = pts[pts.length - 2];
+    const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
+    const size = 1.8;
+    const tipX = last.x + size * Math.cos(ang);
+    const tipY = last.y + size * Math.sin(ang);
+    const halfW = size * 0.55;
+    const x2 = last.x + halfW * Math.cos(ang + Math.PI / 2);
+    const y2 = last.y + halfW * Math.sin(ang + Math.PI / 2);
+    const x3 = last.x + halfW * Math.cos(ang - Math.PI / 2);
+    const y3 = last.y + halfW * Math.sin(ang - Math.PI / 2);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    arrow.setAttribute('d', `M ${tipX} ${tipY} L ${x2} ${y2} L ${x3} ${y3} Z`);
+    arrow.setAttribute('fill', p.color);
+    g.appendChild(arrow);
+  }
+  // Dots at waypoints
+  routeBuilder.points.forEach((pt, i) => {
+    if (i === 0) return;
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y);
+    c.setAttribute('r', 0.4);
+    c.setAttribute('fill', p.color);
+    c.setAttribute('opacity', 0.6);
+    g.appendChild(c);
+  });
+  routesGroup.appendChild(g);
+}
+
+drawCancel.addEventListener('click', cancelDrawing);
+drawCancel.addEventListener('touchend', (e) => { e.preventDefault(); cancelDrawing(); }, { passive: false });
+
+//=========================================================================
+// UNIFIED DRAG SYSTEM
+// One touchstart on the field-wrap. We figure out what got hit.
+// touchmove/touchend bound to document for cross-element tracking.
+//=========================================================================
+function getPoint(e) {
+  if (e.touches && e.touches.length > 0) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  if (e.changedTouches && e.changedTouches.length > 0) {
+    return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
+
+// What's at the current touch point? (uses elementFromPoint to walk through layers)
+function hitTest(clientX, clientY) {
+  const el = document.elementFromPoint(clientX, clientY);
+  if (!el) return { type: 'none' };
+  const token = el.closest('.token');
+  if (token) return { type: 'token', el: token, id: parseInt(token.dataset.id) };
+  if (el.closest('.los-grip')) return { type: 'los' };
+  if (el.closest('.bottom-bar, .inspector, .topbar')) return { type: 'ui' };
+  // Anything inside field-wrap that's not the above is empty field
+  if (el.closest('.field-wrap')) return { type: 'field' };
+  return { type: 'none' };
+}
+
+function startDrag(e) {
+  if (e.touches && e.touches.length > 1) return;  // ignore multi-touch
+  const pt = getPoint(e);
+  const hit = hitTest(pt.x, pt.y);
+
+  if (hit.type === 'ui') return; // let UI handle it
+
+  // ----- ROUTE DRAW MODE -----
+  // When pending (drawMode set with raw=null), start drawing only if the user
+  // touches the targeted player (for new routes) or the route endpoint (for branches).
+  if (drawMode && drawMode.raw === null) {
+    const p = players.find(pl => pl.id === drawMode.ownerId);
+    if (!p) {
+      drawMode = null;
+      drawBanner.classList.remove('show');
+      return;
+    }
+
+    // Determine start point: player position (new route) or route endpoint (branch)
+    let startPt;
+    let shouldStart = false;
+    if (drawMode.isBranch) {
+      // Start from the route's last point. Allow tap anywhere within ~3y of that.
+      const parentRoute = routes.find(r => r.ownerId === drawMode.ownerId);
+      if (parentRoute && parentRoute.points.length > 0) {
+        const lastPt = parentRoute.points[parentRoute.points.length - 1];
+        const fieldPt = clientToFieldXY(pt.x, pt.y);
+        const distFromEnd = Math.hypot(fieldPt.x - lastPt.x, fieldPt.y - lastPt.y);
+        if (distFromEnd < 4) {  // 4 svg units ≈ 4.5y tolerance
+          startPt = { x: lastPt.x, y: lastPt.y };
+          shouldStart = true;
+        }
+      }
+    } else if (hit.type === 'token' && hit.id === drawMode.ownerId) {
+      startPt = { x: p.x, y: p.y };
+      shouldStart = true;
+    }
+
+    if (shouldStart) {
+      e.preventDefault();
+      drawMode.raw = [startPt];
+      livePreviewPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      livePreviewPath.setAttribute('class', 'route-path live');
+      livePreviewPath.setAttribute('stroke', p.color);
+      routesGroup.appendChild(livePreviewPath);
+      livePreviewArrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      livePreviewArrow.setAttribute('class', 'route-arrow');
+      livePreviewArrow.setAttribute('fill', p.color);
+      livePreviewArrow.setAttribute('stroke', p.color);
+      livePreviewArrow.setAttribute('stroke-width', 0.15);
+      routesGroup.appendChild(livePreviewArrow);
+      drag = { type: 'draw', startClient: pt, didMove: false };
+      return;
+    } else {
+      // Tapped elsewhere → cancel draw mode
+      cancelDrawing();
+      // Fall through so the tap still does its normal job
+    }
+  }
+
+  if (hit.type === 'token') {
+    e.preventDefault();
+    const p = players.find(pl => pl.id === hit.id);
+    if (!p) return;
+    if (p.isLosHandle) {
+      // Dragging the LOS-handle player: move LOS + whole formation
+      drag = {
+        type: 'los',
+        startClient: pt,
+        startValue: losYards,
+        playerSnapshot: players.map(pp => ({ id: pp.id, x: pp.x, y: pp.y })),
+        didMove: false,
+      };
+      hit.el.classList.add('dragging');
+      return;
+    }
+    drag = {
+      type: 'token',
+      id: hit.id,
+      startClient: pt,
+      startValue: { x: p.x, y: p.y },
+      didMove: false,
+    };
+    hit.el.classList.add('dragging');
+    fieldWrap.classList.add('show-los');
+    return;
+  }
+
+  if (hit.type === 'los') {
+    e.preventDefault();
+    drag = {
+      type: 'los',
+      startClient: pt,
+      startValue: losYards,
+      playerSnapshot: players.map(p => ({ id: p.id, x: p.x, y: p.y })),
+      didMove: false,
+    };
+    return;
+  }
+
+  if (hit.type === 'field') {
+    // tap empty field → deselect
+    if (selectedId !== null || selectedRouteId !== null) {
+      selectedId = null;
+      selectedRouteId = null;
+      selectedSegmentIdx = null;
+      selectedWaypointIdx = null;
+      selectedBranchIdx = null;
+      selectedSegmentIsBranch = false;
+      showInspector = false;
+      render();
+      renderRoutes();
+    }
+  }
+}
+
+function moveDrag(e) {
+  if (!drag) return;
+  const pt = getPoint(e);
+  const dx = pt.x - drag.startClient.x;
+  const dy = pt.y - drag.startClient.y;
+  if (Math.hypot(dx, dy) > 4) drag.didMove = true;
+
+  e.preventDefault();
+
+  // Convert client delta to field SVG delta. Wrap is rotated -90°:
+  //   screen-x delta → svg-y delta (sideline-to-sideline, scaled by FIELD_H)
+  //   screen-y delta → -svg-x delta (offense direction; up-on-screen = +svg-x)
+  const rect = fieldWrap.getBoundingClientRect();
+  let dxField = -(dy / rect.height) * FIELD_W;   // svg play-axis delta
+  let dyField =  (dx / rect.width)  * FIELD_H;   // svg sideline delta
+
+  if (drag.type === 'draw') {
+    extendDrawing(pt.x, pt.y);
+    return;
+  }
+
+  if (drag.type === 'token') {
+    const p = players.find(pl => pl.id === drag.id);
+    if (!p) return;
+    const margin = 1.8;
+    const newX = Math.max(margin, Math.min(FIELD_W - margin, drag.startValue.x + dxField));
+    const newY = Math.max(margin, Math.min(FIELD_H - margin, drag.startValue.y + dyField));
+    const dxFinal = newX - drag.startValue.x;
+    const dyFinal = newY - drag.startValue.y;
+    p.x = newX; p.y = newY;
+    updateTokenPosition(p.id);
+    // If the player owns a route, translate the route by the same delta
+    const ownedRoute = routes.find(r => r.ownerId === p.id);
+    if (ownedRoute && (dxFinal !== 0 || dyFinal !== 0)) {
+      // translate from the original snapshot at start of drag
+      if (!drag.routeSnapshot) {
+        drag.routeSnapshot = ownedRoute.points.map(pt => ({ x: pt.x, y: pt.y }));
+      }
+      ownedRoute.points = drag.routeSnapshot.map(pt => ({
+        x: pt.x + dxFinal,
+        y: pt.y + dyFinal,
+      }));
+      renderRoutes();
+    }
+  } else if (drag.type === 'los') {
+    const dyards = dxField / YARD;
+    let newYards = Math.round(drag.startValue + dyards);
+    newYards = Math.max(0, Math.min(70, newYards));
+
+    // The actual LOS shift in SVG x-units
+    const dxLos = (newYards - drag.startValue) * YARD;
+
+    if (newYards !== losYards) {
+      losYards = newYards;
+      updateLos();
+      // Move every player by the same dxLos, clamping to keep them on the field
+      const margin = 1.8;
+      drag.playerSnapshot.forEach(s => {
+        const p = players.find(pl => pl.id === s.id);
+        if (!p) return;
+        p.x = Math.max(margin, Math.min(FIELD_W - margin, s.x + dxLos));
+        updateTokenPosition(p.id);
+      });
+      // Translate all routes by the same dxLos (snapshot once)
+      if (!drag.routesSnapshot) {
+        drag.routesSnapshot = routes.map(r => ({
+          id: r.id,
+          points: r.points.map(pt => ({ x: pt.x, y: pt.y })),
+        }));
+      }
+      drag.routesSnapshot.forEach(rs => {
+        const r = routes.find(rt => rt.id === rs.id);
+        if (!r) return;
+        r.points = rs.points.map(pt => ({ x: pt.x + dxLos, y: pt.y })); // y unchanged
+      });
+      if (routes.length) renderRoutes();
+    }
+  }
+}
+
+function endDrag(e) {
+  if (!drag) return;
+  if (drag.type === 'token') {
+    const el = playerLayer.querySelector(`[data-id="${drag.id}"]`);
+    if (el) el.classList.remove('dragging');
+    fieldWrap.classList.remove('show-los');
+    if (!drag.didMove) {
+      selectedId = drag.id;
+      showInspector = true;
+      render();
+    }
+  } else if (drag.type === 'los') {
+    // Clear dragging class on whichever element initiated this LOS drag
+    const losPlayer = players.find(p => p.isLosHandle);
+    if (losPlayer) {
+      const el = playerLayer.querySelector(`[data-id="${losPlayer.id}"]`);
+      if (el) el.classList.remove('dragging');
+    }
+    if (drag.didMove) {
+      showHelper("LOS at " + losYards + " yard line");
+    } else if (losPlayer) {
+      // Tap on the C without dragging → select it
+      selectedId = losPlayer.id;
+      showInspector = true;
+      render();
+    }
+  } else if (drag.type === 'draw') {
+    finishDrawing();
+  }
+  drag = null;
+}
+
+// ---- Bind to field-wrap for start, document for move/end ----
+fieldWrap.addEventListener('touchstart', startDrag, { passive: false });
+fieldWrap.addEventListener('mousedown',  startDrag);
+
+document.addEventListener('touchmove', moveDrag, { passive: false });
+document.addEventListener('mousemove', moveDrag);
+
+document.addEventListener('touchend',    endDrag);
+document.addEventListener('touchcancel', endDrag);
+document.addEventListener('mouseup',     endDrag);
+
+//=========================================================================
+// INSPECTOR
+//=========================================================================
+function updateInspector() {
+  const dpad = document.getElementById('dpad');
+  if (selectedId === null) {
+    inspector.classList.remove('open');
+    dpad.classList.remove('open');
+    return;
+  }
+  const p = players.find(pl => pl.id === selectedId);
+  if (!p) {
+    inspector.classList.remove('open');
+    dpad.classList.remove('open');
+    return;
+  }
+  // D-pad always shows when something is selected
+  dpad.classList.add('open');
+  // Inspector only shows when explicitly requested (i.e. tapped on field)
+  if (!showInspector) {
+    inspector.classList.remove('open');
+    return;
+  }
+  inspector.classList.add('open');
+  inspTitle.textContent = p.side === 'offense' ? 'Offensive Player' : 'Defensive Player';
+  inspLabel.value = p.label || '';
+  [...colorGrid.children].forEach(s => {
+    s.classList.toggle('selected', s.dataset.color.toLowerCase() === p.color.toLowerCase());
+  });
+  // Route button label depends on whether this player has a route
+  const hasRoute = routes.some(r => r.ownerId === p.id);
+  if (hasRoute) {
+    routeBtn.textContent = 'Delete Route';
+    routeBtn.classList.add('has-route');
+  } else {
+    routeBtn.textContent = 'Draw Route';
+    routeBtn.classList.remove('has-route');
+  }
+}
+function buildColorGrid() {
+  COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch';
+    sw.style.background = c;
+    sw.dataset.color = c;
+    const apply = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (selectedId === null) return;
+      const p = players.find(pl => pl.id === selectedId);
+      if (!p) return;
+      p.color = c;
+      render();
+    };
+    sw.addEventListener('click', apply);
+    sw.addEventListener('touchend', apply, { passive: false });
+    colorGrid.appendChild(sw);
+  });
+}
+inspLabel.addEventListener('input', () => {
+  if (selectedId === null) return;
+  const p = players.find(pl => pl.id === selectedId);
+  if (!p) return;
+  p.label = inspLabel.value;
+  const el = playerLayer.querySelector(`[data-id="${p.id}"]`);
+  if (el) el.textContent = p.label;
+});
+document.getElementById('deleteBtn').addEventListener('click', () => {
+  if (selectedId === null) return;
+  // Drop any route owned by this player
+  routes = routes.filter(r => r.ownerId !== selectedId);
+  players = players.filter(p => p.id !== selectedId);
+  selectedId = null;
+  render();
+  renderRoutes();
+});
+
+routeBtn.addEventListener('click', () => {
+  if (selectedId === null) return;
+  const hasRoute = routes.some(r => r.ownerId === selectedId);
+  if (hasRoute) {
+    // Delete the route
+    routes = routes.filter(r => r.ownerId !== selectedId);
+    selectedRouteId = null;
+    renderRoutes();
+    updateInspector();
+    showHelper("Route deleted");
+  } else {
+    // Enter draw mode for this player
+    enterDrawMode(selectedId);
+    inspector.classList.remove('open'); // get out of the way
+  }
+});
+
+//=========================================================================
+// BOTTOM BAR
+//=========================================================================
+//=========================================================================
+// MENU (top-bar dropdown)
+//=========================================================================
+const menuBtn   = document.getElementById('menuBtn');
+const menuPanel = document.getElementById('menuPanel');
+function closeMenu() { menuPanel.classList.remove('open'); }
+function toggleMenu() { menuPanel.classList.toggle('open'); }
+
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleMenu();
+});
+// Tap anywhere else closes the menu
+document.addEventListener('click', (e) => {
+  if (!menuPanel.classList.contains('open')) return;
+  if (e.target.closest('#menuBtn, #menuPanel')) return;
+  closeMenu();
+});
+document.addEventListener('touchstart', (e) => {
+  if (!menuPanel.classList.contains('open')) return;
+  if (e.target.closest('#menuBtn, #menuPanel')) return;
+  closeMenu();
+}, { passive: true });
+
+document.getElementById('addOff').addEventListener('click', () => {
+  closeMenu();
+  addPlayer('offense', losXSvg() - 0.5, 26.5 + (Math.random() - 0.5) * 8, '?', '#ff6b35');
+  selectedId = players[players.length - 1].id;
+  showInspector = true;
+  render();
+  showHelper("Offensive player added");
+});
+document.getElementById('addDef').addEventListener('click', () => {
+  closeMenu();
+  addPlayer('defense', losXSvg() + 1.5, 26.5 + (Math.random() - 0.5) * 8, '?', '#4a90e2');
+  selectedId = players[players.length - 1].id;
+  showInspector = true;
+  render();
+  showHelper("Defensive player added");
+});
+document.getElementById('addDefenseBtn').addEventListener('click', () => {
+  closeMenu();
+  loadDefaultDefense();
+  selectedId = null;
+  render();
+  renderRoutes();
+  showHelper("Cover 3 defense added");
+});
+document.getElementById('capBoxesBtn').addEventListener('click', () => {
+  closeMenu();
+  capBoxesOn = !capBoxesOn;
+  updateCapBoxes();
+  showHelper(capBoxesOn ? "Cap boxes ON" : "Cap boxes OFF");
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  closeMenu();
+  players = []; routes = []; selectedId = null; selectedRouteId = null;
+  currentPlayName = null;
+  render(); renderRoutes(); updatePlayNameLabel(); showHelper("Field cleared");
+});
+document.getElementById('defaultBtn').addEventListener('click', () => {
+  closeMenu();
+  selectedId = null;
+  currentPlayName = null;
+  loadDefault();
+  updatePlayNameLabel();
+  showHelper("Offense reset");
+});
+
+//=========================================================================
+// FLIP & ZOOM (CSS classes — no JS transform math)
+//=========================================================================
+// Flip dropdown
+const flipMenu = document.getElementById('flipMenu');
+document.getElementById('flipBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  flipMenu.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!flipMenu.classList.contains('open')) return;
+  if (e.target.closest('#flipBtn, #flipMenu')) return;
+  flipMenu.classList.remove('open');
+});
+
+// Flip DIRECTION — mirror player positions around the LOS, reverse play direction
+function flipDirection() {
+  const losX = losXSvg();
+  players.forEach(p => {
+    p.x = 2 * losX - p.x;
+  });
+  routes.forEach(r => {
+    r.points = r.points.map(pt => ({ x: 2 * losX - pt.x, y: pt.y }));
+    if (r.branches) {
+      r.branches.forEach(br => {
+        br.points = br.points.map(pt => ({ x: 2 * losX - pt.x, y: pt.y }));
+      });
+    }
+  });
+  flipped = !flipped;
+  fieldWrap.classList.toggle('flipped', flipped);
+  render();
+  renderRoutes();
+  updateLos();
+}
+
+// Flip PLAY — mirror player positions laterally (across field's center y-axis)
+// Twins Right becomes Twins Left. Same direction of attack, mirrored alignment.
+function flipPlay() {
+  const centerY = FIELD_H / 2;
+  players.forEach(p => {
+    p.y = 2 * centerY - p.y;
+  });
+  routes.forEach(r => {
+    r.points = r.points.map(pt => ({ x: pt.x, y: 2 * centerY - pt.y }));
+    if (r.branches) {
+      r.branches.forEach(br => {
+        br.points = br.points.map(pt => ({ x: pt.x, y: 2 * centerY - pt.y }));
+      });
+    }
+  });
+  // Mirror cap box colors across the sideline axis: row 0 ↔ row 2 (row 1 stays)
+  if (typeof capBoxFills !== 'undefined') {
+    const mirrored = {};
+    Object.entries(capBoxFills).forEach(([key, color]) => {
+      const [row, col] = key.split(',').map(Number);
+      const newRow = 2 - row;  // 0↔2, 1↔1
+      mirrored[`${newRow},${col}`] = color;
+    });
+    Object.keys(capBoxFills).forEach(k => delete capBoxFills[k]);
+    Object.entries(mirrored).forEach(([k, v]) => { capBoxFills[k] = v; });
+    if (typeof updateCapBoxes === 'function') updateCapBoxes();
+  }
+  render();
+  renderRoutes();
+}
+
+// Flip FORMATION ONLY — mirror positions but keep colors/labels anchored to field position
+// So if RED was at top-wing and GREEN at bottom-wing, after this flip whoever
+// is now at top-wing wears RED (and gets that label), bottom-wing wears GREEN.
+function flipFormationOnly() {
+  const offense = players.filter(p => p.side === 'offense');
+  const defense = players.filter(p => p.side === 'defense');
+  const centerY = FIELD_H / 2;
+
+  function processSide(group) {
+    if (group.length === 0) return;
+
+    const snap = group.map(p => ({
+      id: p.id,
+      origX: p.x, origY: p.y,
+      color: p.color, label: p.label,
+    }));
+
+    // Mirror positions
+    group.forEach(p => { p.y = 2 * centerY - p.y; });
+    const ids = new Set(group.map(p => p.id));
+    routes.forEach(r => {
+      if (!ids.has(r.ownerId)) return;
+      r.points = r.points.map(pt => ({ x: pt.x, y: 2 * centerY - pt.y }));
+      if (r.branches) {
+        r.branches.forEach(br => {
+          br.points = br.points.map(pt => ({ x: pt.x, y: 2 * centerY - pt.y }));
+        });
+      }
+    });
+
+    // For each snapshot S at (origX, origY) with its color/label, find the
+    // CURRENT player whose new position is closest to (origX, origY) —
+    // i.e. the player who is NOW at the position where S originally was.
+    // That player takes S's color/label. Result: colors stay anchored to
+    // field positions; players who moved here adopt the local color.
+    const currentPlayers = [...group];
+    const assignments = new Map();
+
+    const triples = [];
+    snap.forEach((s, si) => {
+      const targetX = s.origX;
+      const targetY = s.origY;  // <-- ORIGINAL position, not mirrored
+      currentPlayers.forEach(cp => {
+        const d = Math.hypot(cp.x - targetX, cp.y - targetY);
+        triples.push({ si, pid: cp.id, d });
+      });
+    });
+    triples.sort((a, b) => a.d - b.d);
+
+    const usedSnaps = new Set();
+    const usedPids = new Set();
+    triples.forEach(t => {
+      if (usedSnaps.has(t.si) || usedPids.has(t.pid)) return;
+      assignments.set(t.pid, t.si);
+      usedSnaps.add(t.si);
+      usedPids.add(t.pid);
+    });
+
+    // Apply: each player gets the color+label of the snapshot they were paired with
+    group.forEach(p => {
+      const si = assignments.get(p.id);
+      if (si == null) return;
+      const s = snap[si];
+      p.color = s.color;
+      p.label = s.label;
+    });
+  }
+
+  processSide(offense);
+  processSide(defense);
+  render();
+  renderRoutes();
+}
+
+document.getElementById('flipDirBtn').addEventListener('click', () => {
+  flipMenu.classList.remove('open');
+  flipDirection();
+  showHelper(flipped ? "Direction flipped" : "Direction restored");
+});
+document.getElementById('flipPlayBtn').addEventListener('click', () => {
+  flipMenu.classList.remove('open');
+  flipPlay();
+  playNameFlipped = !playNameFlipped;
+  updatePlayNameLabel();
+  showHelper("Play mirrored (L ↔ R)");
+});
+document.getElementById('flipFormBtn').addEventListener('click', () => {
+  flipMenu.classList.remove('open');
+  flipFormationOnly();
+  showHelper("Formation flipped (colors stay)");
+});
+
+// Swap positions of two players identified by color; everyone else stays put
+function swapByColor(colorA, colorB, labelA, labelB) {
+  const matches = (c, target) => {
+    if (!c) return false;
+    return c.toLowerCase() === target.toLowerCase();
+  };
+  const a = players.find(p => matches(p.color, colorA));
+  const b = players.find(p => matches(p.color, colorB));
+  if (!a || !b) {
+    showHelper(`Need both ${labelA} and ${labelB} players`);
+    return;
+  }
+  // Swap color AND label (text inside the token). Positions stay; routes stay.
+  const tColor = a.color, tLabel = a.label;
+  a.color = b.color; a.label = b.label;
+  b.color = tColor; b.label = tLabel;
+  // Swap matching cap box colors too, so cap boxes stay coordinated with player labels
+  if (typeof capBoxFills !== 'undefined') {
+    Object.keys(capBoxFills).forEach(k => {
+      if (matches(capBoxFills[k], colorA))      capBoxFills[k] = colorB;
+      else if (matches(capBoxFills[k], colorB)) capBoxFills[k] = colorA;
+    });
+    if (typeof updateCapBoxes === 'function') updateCapBoxes();
+  }
+  render();
+  renderRoutes();
+}
+
+document.getElementById('flipRYBtn').addEventListener('click', () => {
+  flipMenu.classList.remove('open');
+  swapByColor('#ff4444', '#ffd84d', 'red', 'yellow');
+  showHelper("Red ↔ Yellow swapped");
+});
+document.getElementById('flipYGBtn').addEventListener('click', () => {
+  flipMenu.classList.remove('open');
+  swapByColor('#ffd84d', '#7ed957', 'yellow', 'green');
+  showHelper("Yellow ↔ Green swapped");
+});
+document.getElementById('flipRGBtn').addEventListener('click', () => {
+  flipMenu.classList.remove('open');
+  swapByColor('#ff4444', '#7ed957', 'red', 'green');
+  showHelper("Red ↔ Green swapped");
+});
+
+//=========================================================================
+// SIDE TOGGLE
+//=========================================================================
+const sideOff = document.getElementById('sideOff');
+const sideDef = document.getElementById('sideDef');
+sideOff.addEventListener('click', () => {
+  sideOff.classList.add('active'); sideDef.classList.remove('active');
+});
+sideDef.addEventListener('click', () => {
+  sideDef.classList.add('active'); sideOff.classList.remove('active');
+});
+
+//=========================================================================
+// HELPER
+//=========================================================================
+let helperTimer = null;
+function showHelper(text, ms = 1600) {
+  helper.textContent = text;
+  helper.classList.add('show');
+  if (helperTimer) clearTimeout(helperTimer);
+  if (ms > 0) {
+    helperTimer = setTimeout(() => helper.classList.remove('show'), ms);
+  }
+}
+
+//=========================================================================
+// KEYBOARD
+//=========================================================================
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedId !== null) {
+      players = players.filter(p => p.id !== selectedId);
+      selectedId = null;
+      render();
+    }
+  } else if (e.key === 'Escape') {
+    selectedId = null; render();
+  } else if (e.key.toLowerCase() === 'f') {
+    flipDirection();
+    showHelper(flipped ? "Direction flipped" : "Direction restored");
+  }
+});
+
+//=========================================================================
+// ROUTE LIBRARY — preset routes that can be applied to any player
+//=========================================================================
+// Coords are RELATIVE to the player (delta from player's position) in svg units.
+// YARD = 80/90 ≈ 0.888 svg units per yard.
+// Positive deltaX = forward (toward end zone the offense is attacking)
+// Positive deltaY = toward field's lower side (away from top sideline)
+// Negative deltaY = toward field's upper side (toward top sideline)
+//
+// All routes assume the player is on the TOP side of the field (low y).
+// If applied to a bottom-side player, deltaY is flipped automatically.
+const ROUTE_LIBRARY = [
+  {
+    name: '0 - Hitch',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 5 * YARD, dy: 0 },
+      { dx: 3.59 * YARD, dy: 1.41 * YARD },
+    ],
+  },
+  {
+    name: '1 - Arrow',
+    type: 'curve',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 2 * YARD, dy: -3 * YARD },
+      { dx: 2.6 * YARD, dy: -7 * YARD },
+      { dx: 2.85 * YARD, dy: -10 * YARD },
+      { dx: 3 * YARD, dy: -13 * YARD },
+    ],
+  },
+  {
+    name: '2 - Slant',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 3 * YARD, dy: 0 },
+      { dx: 4.39 * YARD, dy: 7.87 * YARD },
+    ],
+  },
+  {
+    name: '3 - Out',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 6 * YARD, dy: 0 },
+      { dx: 6 * YARD, dy: -6 * YARD },
+    ],
+  },
+  {
+    name: '4 - Curl',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 7 * YARD, dy: 0 },
+      { dx: 5.59 * YARD, dy: 1.41 * YARD },
+    ],
+  },
+  {
+    name: '5 - Sail',
+    type: 'curve',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 2 * YARD, dy: -0.3 * YARD },
+      { dx: 4 * YARD, dy: -1 * YARD },
+      { dx: 6 * YARD, dy: -4 * YARD },
+      { dx: 7 * YARD, dy: -8 * YARD },
+      { dx: 8 * YARD, dy: -14 * YARD },
+    ],
+  },
+  {
+    name: '6 - Dig',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 7 * YARD, dy: 0 },
+      { dx: 7 * YARD, dy: 8 * YARD },
+    ],
+  },
+  {
+    name: '7 - Corner',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 6 * YARD, dy: 0 },
+      { dx: 10.95 * YARD, dy: -4.95 * YARD },
+    ],
+  },
+  {
+    name: '8 - Post',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 6 * YARD, dy: 0 },
+      { dx: 10.95 * YARD, dy: 4.95 * YARD },
+    ],
+  },
+  {
+    name: '9 - Go',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 12 * YARD, dy: 0 },
+    ],
+  },
+  {
+    name: 'Slant-Back',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 2.91 * YARD, dy: 4.85 * YARD },
+      { dx: 8.10 * YARD, dy: -3.78 * YARD },
+    ],
+  },
+  {
+    name: 'Slant-Deep',
+    type: 'segments',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 5 * YARD, dy: 0 },
+      { dx: 6.39 * YARD, dy: 7.87 * YARD },
+    ],
+  },
+  {
+    name: 'Drag',
+    type: 'curve',
+    // Mirror of Arrow (breaks to WR's INSIDE instead of outside) + 6y longer.
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 2 * YARD, dy: 3 * YARD },
+      { dx: 2.6 * YARD, dy: 7 * YARD },
+      { dx: 2.85 * YARD, dy: 10 * YARD },
+      { dx: 3 * YARD, dy: 13 * YARD },
+      { dx: 3 * YARD, dy: 19 * YARD },
+    ],
+  },
+  {
+    name: 'Wheel',
+    type: 'curve',
+    relPoints: [
+      { dx: 0, dy: 0 },
+      { dx: 0.7 * YARD, dy: -1 * YARD },
+      { dx: 2 * YARD, dy: -3 * YARD },
+      { dx: 2.4 * YARD, dy: -5 * YARD },
+      { dx: 2.6 * YARD, dy: -7 * YARD },
+      { dx: 2.75 * YARD, dy: -9 * YARD },
+      { dx: 2.85 * YARD, dy: -11 * YARD },
+      { dx: 2.95 * YARD, dy: -13 * YARD },
+      { dx: 3 * YARD, dy: -15 * YARD },
+      { dx: 3 * YARD, dy: -16 * YARD },
+      { dx: 3.10 * YARD, dy: -16.78 * YARD },
+      { dx: 3.40 * YARD, dy: -17.50 * YARD },
+      { dx: 3.88 * YARD, dy: -18.12 * YARD },
+      { dx: 4.50 * YARD, dy: -18.60 * YARD },
+      { dx: 5.22 * YARD, dy: -18.90 * YARD },
+      { dx: 6.0  * YARD, dy: -19.0  * YARD },
+      { dx: 9 * YARD,  dy: -19 * YARD },
+      { dx: 13 * YARD, dy: -19 * YARD },
+      { dx: 18 * YARD, dy: -19 * YARD },
+    ],
+  },
+];
+
+// =========================================================================
+// FORMATION LIBRARY — saved arrangements of all 5 offensive players
+// =========================================================================
+const FORMATION_LIBRARY_KEY = 'formation_library_v2';
+let FORMATION_LIBRARY = [
+  {
+    name: 'Twins Left',
+    players: [
+      { label: 'C',  color: '#4a90e2', isLosHandle: true,  dx: 0,  dy: 1.0 },
+      { label: 'QB', color: '#1a1a1a', isLosHandle: false, dx: -6, dy: 1.0 },
+      { label: 'Z',  color: '#ff4444', isLosHandle: false, dx: 0,  dy: -19.33 },
+      { label: 'Y',  color: '#ffd84d', isLosHandle: false, dx: 0,  dy: -9.17 },
+      { label: 'X',  color: '#7ed957', isLosHandle: false, dx: 0,  dy: 18.33 },
+    ],
+  },
+  {
+    name: 'Twins Left Tight',
+    players: [
+      { label: 'C',  color: '#4a90e2', isLosHandle: true,  dx: 0,  dy: 1.0 },
+      { label: 'QB', color: '#1a1a1a', isLosHandle: false, dx: -6, dy: 1.0 },
+      { label: 'Z',  color: '#ff4444', isLosHandle: false, dx: 0,  dy: -7.66 },
+      { label: 'Y',  color: '#ffd84d', isLosHandle: false, dx: 0,  dy: -3.33 },
+      { label: 'X',  color: '#7ed957', isLosHandle: false, dx: 0,  dy: 5.33 },
+    ],
+  },
+  {
+    name: 'Twins Left Y Tight',
+    players: [
+      { label: 'C',  color: '#4a90e2', isLosHandle: true,  dx: 0,  dy: 1.0 },
+      { label: 'QB', color: '#1a1a1a', isLosHandle: false, dx: -6, dy: 1.0 },
+      { label: 'Z',  color: '#ff4444', isLosHandle: false, dx: 0,  dy: -19.31 },
+      { label: 'Y',  color: '#ffd84d', isLosHandle: false, dx: 0,  dy: -6.56 },
+      { label: 'X',  color: '#7ed957', isLosHandle: false, dx: 0,  dy: 18.31 },
+    ],
+  },
+  {
+    name: 'Twins Right',
+    players: [
+      { label: 'C',  color: '#4a90e2', isLosHandle: true,  dx: 0,  dy: -1.0 },
+      { label: 'QB', color: '#1a1a1a', isLosHandle: false, dx: -6, dy: -1.0 },
+      { label: 'Z',  color: '#ff4444', isLosHandle: false, dx: 0,  dy: -19.33 },
+      { label: 'Y',  color: '#ffd84d', isLosHandle: false, dx: 0,  dy: 8.67 },
+      { label: 'X',  color: '#7ed957', isLosHandle: false, dx: 0,  dy: 18.33 },
+    ],
+  },
+  {
+    name: 'Twins Right Tight',
+    players: [
+      { label: 'C',  color: '#4a90e2', isLosHandle: true,  dx: 0,  dy: -1.0 },
+      { label: 'QB', color: '#1a1a1a', isLosHandle: false, dx: -6, dy: -1.0 },
+      { label: 'Z',  color: '#ff4444', isLosHandle: false, dx: 0,  dy: -5.33 },
+      { label: 'Y',  color: '#ffd84d', isLosHandle: false, dx: 0,  dy: 3.33 },
+      { label: 'X',  color: '#7ed957', isLosHandle: false, dx: 0,  dy: 7.66 },
+    ],
+  },
+  {
+    name: 'Twins Right Y Tight',
+    players: [
+      { label: 'C',  color: '#4a90e2', isLosHandle: true,  dx: 0,  dy: -1.0 },
+      { label: 'QB', color: '#1a1a1a', isLosHandle: false, dx: -6, dy: -1.0 },
+      { label: 'Z',  color: '#ff4444', isLosHandle: false, dx: 0,  dy: -19.31 },
+      { label: 'Y',  color: '#ffd84d', isLosHandle: false, dx: 0,  dy: 6.44 },
+      { label: 'X',  color: '#7ed957', isLosHandle: false, dx: 0,  dy: 18.31 },
+    ],
+  },
+];
+
+async function loadFormationLibrary() {
+  const hardcoded = FORMATION_LIBRARY.slice();
+  let stored = [];
+  try {
+    let raw = null;
+    if (typeof window.storage !== 'undefined') {
+      const r = await window.storage.get(FORMATION_LIBRARY_KEY);
+      raw = r && r.value;
+    } else {
+      raw = localStorage.getItem(FORMATION_LIBRARY_KEY);
+    }
+    if (raw) stored = JSON.parse(raw);
+  } catch (e) { stored = []; }
+  const hardcodedNames = new Set(hardcoded.map(f => f.name));
+  const userFormations = stored.filter(f => !hardcodedNames.has(f.name));
+  FORMATION_LIBRARY = [...hardcoded, ...userFormations];
+}
+
+async function saveFormationLibrary() {
+  const data = JSON.stringify(FORMATION_LIBRARY);
+  try {
+    if (typeof window.storage !== 'undefined') {
+      await window.storage.set(FORMATION_LIBRARY_KEY, data);
+    } else {
+      localStorage.setItem(FORMATION_LIBRARY_KEY, data);
+    }
+  } catch (e) { console.error('Formation save failed', e); }
+}
+
+function formationThumbnailSvg(formation) {
+  const scale = 1.6;
+  const cx = 40, cy = 40;
+  let lines = `<line x1="6" y1="${cy}" x2="74" y2="${cy}" stroke="#888" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>`;
+  const dots = formation.players.map(p => {
+    const sx = cx + p.dy * scale;
+    const sy = cy - p.dx * scale;
+    const r = p.isLosHandle ? 3 : 2.5;
+    return `<circle cx="${sx}" cy="${sy}" r="${r}" fill="${p.color}" stroke="#000" stroke-width="0.4"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">${lines}${dots}</svg>`;
+}
+
+function applyFormation(formation) {
+  // Wipe routes (clean slate per design)
+  routes = [];
+  selectedRouteId = null;
+  // Wipe offensive players, recreate from the formation
+  players = players.filter(p => p.side !== 'offense');
+  const losX = losXSvg();
+  const centerY = FIELD_H / 2;
+  // dx/dy in the formation are in yards. Apply direction-of-play flip for dx.
+  const dirX = flipped ? -1 : 1;
+  formation.players.forEach(fp => {
+    addPlayer('offense',
+      losX + fp.dx * YARD * dirX,
+      centerY + fp.dy * YARD,
+      fp.label,
+      fp.color,
+      fp.isLosHandle);
+  });
+  selectedId = null;
+  showInspector = false;
+  render();
+  renderRoutes();
+}
+
+function openFormationPicker() {
+  if (FORMATION_LIBRARY.length === 0) {
+    openModal('Pick a Formation', `
+      <p style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px 0;">
+        No formations saved yet.
+      </p>
+    `, { hideConfirm: true });
+    return;
+  }
+  const swatches = FORMATION_LIBRARY.map((f, idx) => `
+    <div class="route-pick-card" data-formidx="${idx}">
+      <div class="route-pick-thumb">${formationThumbnailSvg(f)}</div>
+      <div class="route-pick-name">${f.name}</div>
+    </div>
+  `).join('');
+  openModal('Pick a Formation', `
+    <p style="color:var(--text-dim);font-size:11px;margin-bottom:12px;">
+      Tap a formation to snap players into place (routes will be cleared).
+    </p>
+    <div class="route-pick-grid">${swatches}</div>
+  `, { hideConfirm: true });
+
+  modalBody.querySelectorAll('.route-pick-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.formidx);
+      applyFormation(FORMATION_LIBRARY[idx]);
+      closeModal();
+      showHelper(`Applied "${FORMATION_LIBRARY[idx].name}"`);
+    });
+  });
+}
+
+function saveCurrentAsFormation() {
+  const offense = players.filter(p => p.side === 'offense');
+  if (offense.length === 0) {
+    showHelper("No offensive players to save");
+    return;
+  }
+  openModal('Save Formation', `
+    <label>Formation name</label>
+    <input type="text" id="formName" placeholder="e.g. Trey Right Bunch, Empty 2x2" maxlength="40" autocomplete="off" autocorrect="off">
+  `, {
+    confirmText: 'Save',
+    onConfirm: async () => {
+      const name = document.getElementById('formName').value.trim();
+      if (!name) { showHelper("Name required"); return; }
+      const losX = losXSvg();
+      const centerY = FIELD_H / 2;
+      const dirX = flipped ? -1 : 1;
+      const newFormation = {
+        name,
+        players: offense.map(p => ({
+          label: p.label,
+          color: p.color,
+          isLosHandle: !!p.isLosHandle,
+          dx: ((p.x - losX) / YARD) * dirX,
+          dy: (p.y - centerY) / YARD,
+        })),
+      };
+      const existingIdx = FORMATION_LIBRARY.findIndex(f => f.name === name);
+      if (existingIdx >= 0) FORMATION_LIBRARY[existingIdx] = newFormation;
+      else FORMATION_LIBRARY.push(newFormation);
+      await saveFormationLibrary();
+      closeModal();
+      showHelper(`Saved "${name}"`);
+    }
+  });
+  setTimeout(() => document.getElementById('formName')?.focus(), 60);
+}
+
+// Generate a small SVG thumbnail for a route. Centered, scaled to fit.
+function routeThumbnailSvg(route) {
+  // Use a normalized 60x60 viewBox; player at center
+  const pts = [{ dx: 0, dy: 0 }, ...route.relPoints.filter((p, i) => i > 0)];
+  // Bounding box of all points
+  let minX = 0, maxX = 0, minY = 0, maxY = 0;
+  pts.forEach(p => {
+    if (p.dx < minX) minX = p.dx; if (p.dx > maxX) maxX = p.dx;
+    if (p.dy < minY) minY = p.dy; if (p.dy > maxY) maxY = p.dy;
+  });
+  const w = Math.max(1, maxX - minX);
+  const h = Math.max(1, maxY - minY);
+  // Add padding
+  const pad = 8;
+  const scale = Math.min((60 - pad * 2) / w, (60 - pad * 2) / h);
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  // Build path. Rotate -90deg so route reads bottom-to-top (matches vertical field)
+  // After rotation: (dx, dy) → (dy, -dx)
+  let d = '';
+  pts.forEach((p, i) => {
+    const sx = (p.dy - cy) * scale + 30;
+    const sy = -(p.dx - cx) * scale + 30;
+    d += (i === 0 ? 'M' : 'L') + ` ${sx} ${sy}`;
+  });
+  // Player dot at origin (which after centering is somewhere in the svg)
+  const ox = (0 - cy) * scale + 30;
+  const oy = -(0 - cx) * scale + 30;
+  return `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+    <path d="${d}" fill="none" stroke="#ff6b35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${ox}" cy="${oy}" r="3.5" fill="#fff" stroke="#000" stroke-width="1"/>
+  </svg>`;
+}
+
+function applyRouteToPlayer(playerId, route) {
+  const p = players.find(pl => pl.id === playerId);
+  if (!p) return;
+  // Remove any existing route owned by this player
+  routes = routes.filter(r => r.ownerId !== p.id);
+
+  // Determine if the player is on the top half (y < center) or bottom half.
+  // We want a top-half receiver's "outside" (toward sideline) to be -dy,
+  // and a bottom-half receiver's outside to be +dy. So flip dy for bottom players.
+  const centerY = FIELD_H / 2;
+  const isBottom = p.y > centerY;
+  // Determine if play is going forward (+x direction) or flipped (-x).
+  // After flip, the offense moves toward -x, so we negate dx for routes.
+  const dirX = flipped ? -1 : 1;
+  const dirY = isBottom ? -1 : 1;
+
+  const absPoints = [{ x: p.x, y: p.y }];
+  route.relPoints.forEach((pt, i) => {
+    if (i === 0) return; // skip the (0,0) origin
+    absPoints.push({
+      x: p.x + pt.dx * dirX,
+      y: p.y + pt.dy * dirY,
+    });
+  });
+
+  routes.push({
+    id: nextRouteId++,
+    ownerId: p.id,
+    points: absPoints,
+    smoothed: route.type === 'curve',
+    branches: [],
+  });
+  renderRoutes();
+}
+
+// Picker modal: show route library as a grid of thumbnails
+function openRoutePicker(playerId) {
+  const swatches = ROUTE_LIBRARY.map((r, idx) => `
+    <div class="route-pick-card" data-idx="${idx}">
+      <div class="route-pick-thumb">${routeThumbnailSvg(r)}</div>
+      <div class="route-pick-name">${r.name}</div>
+    </div>
+  `).join('');
+  openModal('Pick a Route', `
+    <p style="color:var(--text-dim);font-size:11px;margin-bottom:12px;">
+      Tap a route to apply it to the selected player.
+    </p>
+    <div class="route-pick-grid">${swatches}</div>
+  `, { hideConfirm: true });
+
+  modalBody.querySelectorAll('.route-pick-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.idx);
+      applyRouteToPlayer(playerId, ROUTE_LIBRARY[idx]);
+      closeModal();
+      showHelper(`Applied "${ROUTE_LIBRARY[idx].name}"`);
+    });
+  });
+}
+
+document.getElementById('pickRouteBtn').addEventListener('click', () => {
+  if (selectedId === null) {
+    showHelper("Select a player first");
+    return;
+  }
+  openRoutePicker(selectedId);
+});
+
+document.getElementById('addOptionBtn').addEventListener('click', () => {
+  if (selectedId === null) {
+    showHelper("Select a player first");
+    return;
+  }
+  const r = routes.find(rt => rt.ownerId === selectedId);
+  if (!r) {
+    showHelper("This player needs a route first");
+    return;
+  }
+  enterDrawMode(selectedId, true);
+  showInspector = false;
+  render();
+});
+
+// Segment-adjust buttons (rotate / length)
+const ROTATE_STEP_DEG = 7;
+document.getElementById('segRotateCcwBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  rotateSelectedSegment(-ROTATE_STEP_DEG);
+});
+document.getElementById('segRotateCwBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  rotateSelectedSegment(+ROTATE_STEP_DEG);
+});
+document.getElementById('segLongerBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  lengthenSelectedSegment(+1);
+});
+document.getElementById('segShorterBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  lengthenSelectedSegment(-1);
+});
+document.getElementById('segDoneBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  selectedSegmentIdx = null;
+  selectedBranchIdx = null;
+  selectedSegmentIsBranch = false;
+  renderRoutes();
+});
+
+// Waypoint-adjust D-pad buttons
+document.getElementById('wpUpBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  nudgeWaypoint(+1, 0);
+});
+document.getElementById('wpDownBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  nudgeWaypoint(-1, 0);
+});
+document.getElementById('wpLeftBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  nudgeWaypoint(0, -1);
+});
+document.getElementById('wpRightBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  nudgeWaypoint(0, +1);
+});
+document.getElementById('wpDoneBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  selectedWaypointIdx = null;
+  renderRoutes();
+});
+
+// Route step-builder D-pad buttons
+document.querySelectorAll('#routeDpad .rd-btn').forEach(btn => {
+  const rdir = btn.dataset.rdir;
+  const SCREEN_DELTAS = {
+    'up':    { dx: +1, dy: 0 },
+    'down':  { dx: -1, dy: 0 },
+    'right': { dx: 0,  dy: +1 },
+    'left':  { dx: 0,  dy: -1 },
+    'ul':    { dx: +1, dy: -1 },
+    'ur':    { dx: +1, dy: +1 },
+    'dl':    { dx: -1, dy: -1 },
+    'dr':    { dx: -1, dy: +1 },
+  };
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const d = SCREEN_DELTAS[rdir];
+    if (!d) return;
+    stepRoute(d.dx, d.dy);
+  });
+});
+
+document.getElementById('rdUndoBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  undoLastStep();
+});
+document.getElementById('rdFinishBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  endRouteBuilder(true);
+});
+
+// Formation library buttons
+document.getElementById('pickFormBtn').addEventListener('click', () => {
+  closeMenu();
+  openFormationPicker();
+});
+document.getElementById('saveFormBtn').addEventListener('click', () => {
+  closeMenu();
+  saveCurrentAsFormation();
+});
+
+//=========================================================================
+// PLAYER SELECT DROPDOWN — picks player and shows D-pad
+//=========================================================================
+document.getElementById('playerSelect').addEventListener('change', (e) => {
+  const id = e.target.value;
+  if (id === '') {
+    selectedId = null;
+  } else {
+    selectedId = parseInt(id);
+  }
+  showInspector = false;  // dropdown selection: D-pad only
+  render();
+});
+
+//=========================================================================
+// D-PAD — nudge selected player by 1 yard per tap
+//=========================================================================
+function nudgeSelected(dx, dy) {
+  if (selectedId === null) return;
+  const p = players.find(pl => pl.id === selectedId);
+  if (!p) return;
+  const margin = 1.8;
+  const oldX = p.x, oldY = p.y;
+  p.x = Math.max(margin, Math.min(FIELD_W - margin, p.x + dx));
+  p.y = Math.max(margin, Math.min(FIELD_H - margin, p.y + dy));
+  const dxFinal = p.x - oldX, dyFinal = p.y - oldY;
+  updateTokenPosition(p.id);
+
+  // If player is the LOS handle, nudging horizontally moves the LOS + everyone
+  if (p.isLosHandle && dxFinal !== 0) {
+    const newYards = Math.max(0, Math.min(70, Math.round(losYards + dxFinal / YARD)));
+    const realDx = (newYards - losYards) * YARD;
+    losYards = newYards;
+    // Move all OTHER players + routes by realDx to keep formation
+    players.forEach(other => {
+      if (other.id === p.id) return;
+      other.x = Math.max(margin, Math.min(FIELD_W - margin, other.x + realDx));
+      updateTokenPosition(other.id);
+    });
+    routes.forEach(r => {
+      r.points = r.points.map(pt => ({ x: pt.x + realDx, y: pt.y }));
+    });
+    if (routes.length) renderRoutes();
+    updateLos();
+    return;
+  }
+
+  // Move this player's route(s) too
+  if (dxFinal !== 0 || dyFinal !== 0) {
+    const ownedRoute = routes.find(r => r.ownerId === p.id);
+    if (ownedRoute) {
+      ownedRoute.points = ownedRoute.points.map(pt => ({ x: pt.x + dxFinal, y: pt.y + dyFinal }));
+      renderRoutes();
+    }
+  }
+}
+
+document.querySelectorAll('#dpad button[data-dir]').forEach(btn => {
+  const dir = btn.dataset.dir;
+  const step = YARD;
+
+  // Map screen direction → svg direction.
+  // Field is rotated -90deg: svg +x → screen UP, svg +y → screen RIGHT.
+  // When flipped, svg +x → screen DOWN, svg +y → screen LEFT.
+  function getDelta() {
+    let svgDx = 0, svgDy = 0;
+    if (dir === 'up')    svgDx = +step;   // up on screen = forward downfield
+    if (dir === 'down')  svgDx = -step;
+    if (dir === 'right') svgDy = +step;
+    if (dir === 'left')  svgDy = -step;
+    if (flipped) { svgDx = -svgDx; svgDy = -svgDy; }
+    return { dx: svgDx, dy: svgDy };
+  }
+
+  let holdTimer = null;
+  let holdInterval = null;
+
+  const fire = () => {
+    const { dx, dy } = getDelta();
+    nudgeSelected(dx, dy);
+  };
+  const startHold = (e) => {
+    e.preventDefault();
+    fire();
+    holdTimer = setTimeout(() => {
+      holdInterval = setInterval(fire, 80);
+    }, 350);
+  };
+  const stopHold = () => {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
+  };
+
+  btn.addEventListener('touchstart', startHold, { passive: false });
+  btn.addEventListener('touchend', stopHold);
+  btn.addEventListener('touchcancel', stopHold);
+  btn.addEventListener('mousedown', startHold);
+  btn.addEventListener('mouseup', stopHold);
+  btn.addEventListener('mouseleave', stopHold);
+});
+
+//=========================================================================
+// PERSISTENT STORAGE — save/load plays and defenses
+//=========================================================================
+// We use window.storage (key/value persistent storage). Keys:
+//   plays:<id>        → JSON of saved play (offense + routes + losYards)
+//   defenses:<id>     → JSON of saved defense (just the defenders + relative pos)
+//   plays:_index      → JSON array of {id, name, savedAt}
+//   defenses:_index   → JSON array of {id, name, savedAt}
+//
+// Falls back to localStorage if window.storage isn't available.
+
+const HAS_STORAGE = (typeof window.storage !== 'undefined');
+
+async function storageGet(key) {
+  if (HAS_STORAGE) {
+    try {
+      const r = await window.storage.get(key);
+      if (r) return r.value;
+      // r is null/undefined — could be "key not present" or storage flake.
+      // Try localStorage as a fallback in case data was written there.
+    } catch { /* fall through */ }
+  }
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+async function storageSet(key, value) {
+  let primaryOk = false;
+  if (HAS_STORAGE) {
+    try {
+      await window.storage.set(key, value);
+      primaryOk = true;
+    } catch { /* fall through to localStorage */ }
+  }
+  // Always also mirror to localStorage so reads work even if window.storage flakes
+  try { localStorage.setItem(key, value); return true; } catch (e) {
+    if (primaryOk) return true;
+    throw new Error('both storages failed: ' + (e && e.message ? e.message : e));
+  }
+}
+async function storageDelete(key) {
+  if (HAS_STORAGE) {
+    try { await window.storage.delete(key); } catch {}
+  }
+  try { localStorage.removeItem(key); return true; } catch { return false; }
+}
+
+async function getIndex(kind) {
+  // kind = 'plays' | 'defenses'
+  const raw = await storageGet(`${kind}:_index`);
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch { return []; }
+}
+async function setIndex(kind, list) {
+  await storageSet(`${kind}:_index`, JSON.stringify(list));
+}
+
+function newId() {
+  return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+// ---- Build save payloads ----
+function getPlayPayload() {
+  // Save offense players + their routes. LOS yardage too (so play loads at the right field position).
+  const offense = players.filter(p => p.side === 'offense');
+  const offenseIds = new Set(offense.map(p => p.id));
+  const offenseRoutes = routes.filter(r => offenseIds.has(r.ownerId));
+  return {
+    losYards,
+    flipped,
+    players: offense.map(p => ({ ...p })),
+    routes: offenseRoutes.map(r => ({
+      ownerId: r.ownerId,
+      points: r.points.map(pt => ({ x: pt.x, y: pt.y })),
+      smoothed: r.smoothed,
+      branches: (r.branches || []).map(br => ({
+        points: br.points.map(pt => ({ x: pt.x, y: pt.y })),
+        smoothed: !!br.smoothed,
+      })),
+    })),
+    capBoxes: typeof capBoxFills !== 'undefined' ? { ...capBoxFills } : {},
+    capBoxesOn,
+  };
+}
+function getDefensePayload() {
+  const defense = players.filter(p => p.side === 'defense');
+  const defenseIds = new Set(defense.map(p => p.id));
+  const defenseRoutes = routes.filter(r => defenseIds.has(r.ownerId));
+  return {
+    // Save positions RELATIVE to the LOS so defense aligns to wherever the LOS is when loaded.
+    losYards,
+    players: defense.map(p => ({
+      ...p,
+      relX: p.x - losXSvg(),  // signed offset from LOS in svg units
+      relY: p.y,
+    })),
+    routes: defenseRoutes.map(r => ({
+      ownerId: r.ownerId,
+      points: r.points.map(pt => ({ x: pt.x - losXSvg(), y: pt.y })),  // also relative
+      smoothed: r.smoothed,
+    })),
+  };
+}
+
+// ---- Apply payloads ----
+function applyPlayPayload(p) {
+  // Replace offense (and their routes) with loaded data
+  players = players.filter(pl => pl.side !== 'offense');
+  routes = routes.filter(r => {
+    const owner = players.find(pp => pp.id === r.ownerId);
+    return owner; // keep only routes that still have an owner (defense)
+  });
+
+  // Re-add offense players (preserve their original IDs for route mapping)
+  const idMap = {};
+  p.players.forEach(pl => {
+    const newPlayer = {
+      id: nextId++,
+      side: 'offense',
+      x: pl.x, y: pl.y,
+      label: pl.label, color: pl.color,
+      isLosHandle: !!pl.isLosHandle,
+    };
+    players.push(newPlayer);
+    idMap[pl.id] = newPlayer.id;
+  });
+  // Re-add routes
+  p.routes.forEach(r => {
+    routes.push({
+      id: nextRouteId++,
+      ownerId: idMap[r.ownerId],
+      points: r.points.map(pt => ({ x: pt.x, y: pt.y })),
+      smoothed: r.smoothed,
+      branches: (r.branches || []).map(br => ({
+        points: br.points.map(pt => ({ x: pt.x, y: pt.y })),
+        smoothed: !!br.smoothed,
+      })),
+    });
+  });
+  // Restore LOS
+  losYards = p.losYards;
+  // Restore flip state
+  if (!!p.flipped !== flipped) {
+    flipDirection();
+  }
+  // Restore cap boxes
+  if (p.capBoxes && typeof capBoxFills !== 'undefined') {
+    Object.keys(capBoxFills).forEach(k => delete capBoxFills[k]);
+    Object.entries(p.capBoxes).forEach(([k, v]) => { capBoxFills[k] = v; });
+  }
+  if (typeof capBoxesOn !== 'undefined') {
+    capBoxesOn = !!p.capBoxesOn;
+    updateCapBoxes && updateCapBoxes();
+  }
+}
+function applyDefensePayload(d) {
+  // Replace defense (and their routes)
+  const oldDefIds = new Set(players.filter(p => p.side === 'defense').map(p => p.id));
+  players = players.filter(p => p.side !== 'defense');
+  routes = routes.filter(r => !oldDefIds.has(r.ownerId));
+
+  const losX = losXSvg();
+  const idMap = {};
+  d.players.forEach(pl => {
+    const newPlayer = {
+      id: nextId++,
+      side: 'defense',
+      x: losX + pl.relX,
+      y: pl.relY,
+      label: pl.label, color: pl.color,
+      isLosHandle: false,
+    };
+    players.push(newPlayer);
+    idMap[pl.id] = newPlayer.id;
+  });
+  (d.routes || []).forEach(r => {
+    routes.push({
+      id: nextRouteId++,
+      ownerId: idMap[r.ownerId],
+      points: r.points.map(pt => ({ x: losX + pt.x, y: pt.y })),
+      smoothed: r.smoothed,
+    });
+  });
+}
+
+//=========================================================================
+// MODAL helpers
+//=========================================================================
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalEl = document.getElementById('modal');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+const modalCancel = document.getElementById('modalCancel');
+const modalConfirm = document.getElementById('modalConfirm');
+let modalOnConfirm = null;
+
+function openModal(title, bodyHtml, opts = {}) {
+  modalTitle.textContent = title;
+  modalBody.innerHTML = bodyHtml;
+  modalConfirm.style.display = opts.hideConfirm ? 'none' : '';
+  modalConfirm.textContent = opts.confirmText || 'Save';
+  modalOnConfirm = opts.onConfirm || null;
+  modalBackdrop.classList.add('open');
+  // Focus name input if present
+  setTimeout(() => {
+    const inp = modalBody.querySelector('input[type="text"]');
+    if (inp) inp.focus();
+  }, 50);
+}
+function closeModal() {
+  modalBackdrop.classList.remove('open');
+  modalOnConfirm = null;
+}
+modalCancel.addEventListener('click', closeModal);
+modalConfirm.addEventListener('click', () => {
+  if (modalOnConfirm) modalOnConfirm();
+});
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop) closeModal();
+});
+
+//=========================================================================
+// SAVE / LOAD HANDLERS
+//=========================================================================
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+async function showSaveDialog(kind, getPayloadFn) {
+  // kind: 'plays' or 'defenses'
+  const isPlay = kind === 'plays';
+  openModal(isPlay ? 'Save Play' : 'Save Defense',
+    `<label>Name</label>
+     <input type="text" id="saveName" placeholder="${isPlay ? 'e.g. Slant Flat Right' : 'e.g. Cover 0 Blitz'}" maxlength="40" autocomplete="off" autocorrect="off">
+     <p style="margin-top:12px;color:var(--text-dim);font-size:11px;">
+       ${isPlay
+        ? 'Saves the current offense and routes.'
+        : 'Saves the current defense (positions relative to LOS).'}
+     </p>`,
+    {
+      confirmText: 'Save',
+      onConfirm: async () => {
+        const name = document.getElementById('saveName').value.trim();
+        if (!name) {
+          showHelper("Name is required");
+          return;
+        }
+        const id = newId();
+        const payload = getPayloadFn();
+        const ok = await storageSet(`${kind}:${id}`, JSON.stringify(payload));
+        if (!ok) {
+          showHelper("Save failed");
+          closeModal();
+          return;
+        }
+        const idx = await getIndex(kind);
+        idx.unshift({ id, name, savedAt: Date.now() });
+        await setIndex(kind, idx);
+        closeModal();
+        showHelper(`Saved "${name}"`);
+      }
+    });
+}
+
+async function showLoadDialog(kind, applyFn) {
+  const isPlay = kind === 'plays';
+  const idx = await getIndex(kind);
+  let body;
+  if (idx.length === 0) {
+    body = `<div class="saved-list"><div class="empty">No saved ${isPlay ? 'plays' : 'defenses'} yet.</div></div>`;
+  } else {
+    const rows = idx.map(item => `
+      <li>
+        <div class="name" data-load-id="${item.id}">
+          ${escapeHtml(item.name)}
+          <div class="when">${new Date(item.savedAt).toLocaleString()}</div>
+        </div>
+        <button class="del" data-del-id="${item.id}" title="Delete">✕</button>
+      </li>`).join('');
+    body = `<ul class="saved-list">${rows}</ul>`;
+  }
+  openModal(isPlay ? 'Load Play' : 'Load Defense', body, {
+    hideConfirm: true,
+  });
+
+  // Wire up taps
+  modalBody.querySelectorAll('.name').forEach(el => {
+    el.addEventListener('click', async (e) => {
+      const id = el.dataset.loadId;
+      const raw = await storageGet(`${kind}:${id}`);
+      if (!raw) { showHelper("Could not load"); return; }
+      try {
+        const payload = JSON.parse(raw);
+        applyFn(payload);
+        render();
+        renderRoutes();
+        updateLos();
+        closeModal();
+        const item = idx.find(i => i.id === id);
+        if (isPlay && item) {
+          currentPlayName = item.name;
+          playNameFlipped = false;
+          updateCapBoxes && updateCapBoxes();
+        }
+        showHelper(`Loaded "${item ? item.name : 'item'}"`);
+      } catch {
+        showHelper("Load failed (corrupt data)");
+      }
+    });
+  });
+  modalBody.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.delId;
+      await storageDelete(`${kind}:${id}`);
+      const newIdx = (await getIndex(kind)).filter(i => i.id !== id);
+      await setIndex(kind, newIdx);
+      // Reopen the list to refresh
+      showLoadDialog(kind, applyFn);
+    });
+  });
+}
+
+document.getElementById('savePlayBtn').addEventListener('click', () => {
+  closeMenu();
+  showSaveDialog('plays', getPlayPayload);
+});
+document.getElementById('loadPlayBtn').addEventListener('click', () => {
+  closeMenu();
+  showLoadDialog('plays', applyPlayPayload);
+});
+document.getElementById('installDemoBtn').addEventListener('click', async () => {
+  closeMenu();
+  try {
+    const idx = await getIndex('plays');
+    const formation = FORMATION_LIBRARY.find(f => f.name === 'Twins Left Y Tight');
+    if (!formation) {
+      showHelper("FAIL: formation 'Twins Left Y Tight' not found", 5000);
+      return;
+    }
+
+    // Remove ANY old copies of demo plays so they get re-installed with new names
+    const OLD_NAMES = [
+      'Slot Cross Option Left', 'Slot Cross Z Option Left',
+      'Twins L Slot-Cross Option L',
+      'Twin R Tight Sail R C-Option', 'Twins R Tight Sail R C-Option',
+      'Bunch R Mesh',
+    ];
+    const toDelete = idx.filter(p => OLD_NAMES.includes(p.name));
+    for (const old of toDelete) {
+      await storageDelete(`plays:${old.id}`);
+    }
+    const cleanedIdx = idx.filter(p => !OLD_NAMES.includes(p.name));
+    await setIndex('plays', cleanedIdx);
+
+    showHelper("Installing…", 0);
+    await installDemoPlays();
+
+    const finalIdx = await getIndex('plays');
+    const installed = finalIdx.find(p => p.name === 'Twins L Slot-Cross Option L');
+    if (installed) {
+      showHelper(`SUCCESS! Removed ${toDelete.length} old, installed new.`, 4000);
+      setTimeout(() => showLoadDialog('plays', applyPlayPayload), 1200);
+    } else {
+      showHelper(`FAIL: install didn't land. Index: ${JSON.stringify(finalIdx.map(p=>p.name))}`, 8000);
+    }
+  } catch (err) {
+    showHelper("ERROR: " + (err && err.message ? err.message : String(err)), 8000);
+  }
+});
+document.getElementById('saveDefenseBtn').addEventListener('click', () => {
+  closeMenu();
+  // Require there to be at least one defender
+  if (!players.some(p => p.side === 'defense')) {
+    showHelper("Add a defense first");
+    return;
+  }
+  showSaveDialog('defenses', getDefensePayload);
+});
+document.getElementById('loadDefenseBtn').addEventListener('click', () => {
+  closeMenu();
+  showLoadDialog('defenses', applyDefensePayload);
+});
+
+//=========================================================================
+// INIT
+//=========================================================================
+// ============================================================
+// DEMO PLAYS — install hardcoded plays on first load
+// ============================================================
+async function installDemoPlay(playName, builder) {
+  const log = (msg) => { showHelper(msg, 0); };
+  try {
+    log("A: getting index");
+    const idx = await getIndex('plays');
+    if (idx.some(p => p.name === playName)) {
+      log("Already installed");
+      return;
+    }
+
+    log("B: snapshotting state");
+    const savedPlayers = players.map(p => ({...p}));
+    const savedRoutes = routes.map(r => ({...r, points: r.points.map(pt => ({...pt})), branches: (r.branches||[]).map(br => ({...br, points: br.points.map(pt => ({...pt}))}))}));
+    const savedLos = losYards;
+    const savedFlipped = flipped;
+    const savedCapFills = typeof capBoxFills !== 'undefined' ? { ...capBoxFills } : null;
+    const savedCapOn = typeof capBoxesOn !== 'undefined' ? capBoxesOn : false;
+
+    try {
+      // Helpers exposed to the builder closure
+      function rotateSegment(routeOwnerLabel, segIdx, degrees) {
+        const owner = players.find(p => p.label === routeOwnerLabel && p.side === 'offense');
+        if (!owner) throw new Error('rotateSegment: no owner ' + routeOwnerLabel);
+        const r = routes.find(rt => rt.ownerId === owner.id);
+        if (!r) throw new Error('rotateSegment: no route for ' + routeOwnerLabel);
+        if (segIdx + 1 >= r.points.length) throw new Error('rotateSegment: segIdx oob');
+        const pts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+        const pivot = pts[segIdx];
+        const rad = degrees * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        for (let i = segIdx + 1; i < pts.length; i++) {
+          const dx = pts[i].x - pivot.x;
+          const dy = pts[i].y - pivot.y;
+          pts[i] = {
+            x: pivot.x + dx * cos - dy * sin,
+            y: pivot.y + dx * sin + dy * cos,
+          };
+        }
+        r.points = [pts[0], ...pts.slice(1)];
+      }
+      function lengthenSegment(routeOwnerLabel, segIdx, yards) {
+        const owner = players.find(p => p.label === routeOwnerLabel && p.side === 'offense');
+        if (!owner) throw new Error('lengthen: no owner ' + routeOwnerLabel);
+        const r = routes.find(rt => rt.ownerId === owner.id);
+        if (!r) throw new Error('lengthen: no route for ' + routeOwnerLabel);
+        if (segIdx + 1 >= r.points.length) throw new Error('lengthen: segIdx oob');
+        const pts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+        const segStart = pts[segIdx];
+        const segEnd = pts[segIdx + 1];
+        const dx = segEnd.x - segStart.x;
+        const dy = segEnd.y - segStart.y;
+        const len = Math.hypot(dx, dy);
+        if (len === 0) return;
+        const ux = dx / len, uy = dy / len;
+        const offsetX = ux * yards * YARD;
+        const offsetY = uy * yards * YARD;
+        for (let i = segIdx + 1; i < pts.length; i++) {
+          pts[i] = { x: pts[i].x + offsetX, y: pts[i].y + offsetY };
+        }
+        r.points = [pts[0], ...pts.slice(1)];
+      }
+      function applyRouteByName(playerLabel, routeName) {
+        const owner = players.find(p => p.label === playerLabel && p.side === 'offense');
+        if (!owner) throw new Error('applyRoute: no owner ' + playerLabel);
+        const route = ROUTE_LIBRARY.find(rt => rt.name === routeName);
+        if (!route) throw new Error('applyRoute: route not found: ' + routeName);
+        applyRouteToPlayer(owner.id, route);
+      }
+      function addBranchToPlayer(playerLabel, screenSteps) {
+        const owner = players.find(p => p.label === playerLabel && p.side === 'offense');
+        if (!owner) throw new Error('addBranch: no owner ' + playerLabel);
+        const r = routes.find(rt => rt.ownerId === owner.id);
+        if (!r) throw new Error('addBranch: no route for ' + playerLabel);
+        const anchor = r.points[r.points.length - 1];
+        const branchPoints = [];
+        let lastDir = null;
+        screenSteps.forEach(s => {
+          let svgDx = s.dx * YARD;
+          let svgDy = s.dy * YARD;
+          if (flipped) { svgDx = -svgDx; svgDy = -svgDy; }
+          const newDir = { dx: s.dx, dy: s.dy };
+          if (lastDir && lastDir.dx === newDir.dx && lastDir.dy === newDir.dy && branchPoints.length >= 1) {
+            const last = branchPoints[branchPoints.length - 1];
+            branchPoints[branchPoints.length - 1] = {
+              x: last.x + svgDx, y: last.y + svgDy,
+            };
+          } else {
+            const base = branchPoints.length
+              ? branchPoints[branchPoints.length - 1]
+              : anchor;
+            branchPoints.push({ x: base.x + svgDx, y: base.y + svgDy });
+          }
+          lastDir = newDir;
+        });
+        if (!r.branches) r.branches = [];
+        r.branches.push({ points: branchPoints, smoothed: false });
+        return r.branches.length - 1;  // return index of new branch
+      }
+      // Rotate a single segment within a branch
+      function rotateBranchSegment(playerLabel, branchIdx, segIdx, degrees) {
+        const owner = players.find(p => p.label === playerLabel && p.side === 'offense');
+        if (!owner) throw new Error('rotateBranch: no owner ' + playerLabel);
+        const r = routes.find(rt => rt.ownerId === owner.id);
+        if (!r || !r.branches || !r.branches[branchIdx]) throw new Error('rotateBranch: no branch');
+        const branch = r.branches[branchIdx];
+        const anchor = r.points[r.points.length - 1];
+        const pts = [anchor, ...branch.points];
+        if (segIdx + 1 >= pts.length) throw new Error('rotateBranch: segIdx oob');
+        const pivot = pts[segIdx];
+        const rad = degrees * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        for (let i = segIdx + 1; i < pts.length; i++) {
+          const dx = pts[i].x - pivot.x;
+          const dy = pts[i].y - pivot.y;
+          pts[i] = {
+            x: pivot.x + dx * cos - dy * sin,
+            y: pivot.y + dx * sin + dy * cos,
+          };
+        }
+        branch.points = pts.slice(1);
+      }
+      function setCapBoxes(fillMap) {
+        if (typeof capBoxFills === 'undefined') return;
+        capBoxesOn = true;
+        Object.keys(capBoxFills).forEach(k => delete capBoxFills[k]);
+        Object.entries(fillMap).forEach(([k, v]) => { capBoxFills[k] = v; });
+        if (typeof updateCapBoxes === 'function') updateCapBoxes();
+      }
+      function nudgePlayer(playerLabel, screenDx, screenDy) {
+        const p = players.find(pl => pl.label === playerLabel && pl.side === 'offense');
+        if (!p) throw new Error('nudge: no player ' + playerLabel);
+        let dxSvg = screenDx * YARD;
+        let dySvg = screenDy * YARD;
+        if (flipped) { dxSvg = -dxSvg; dySvg = -dySvg; }
+        p.x += dxSvg; p.y += dySvg;
+      }
+      // Place a player at an absolute position relative to the LOS center.
+      // forwardYards = +y downfield; lateralYards = +y toward bottom of screen.
+      function placePlayer(playerLabel, forwardYards, lateralYards) {
+        const p = players.find(pl => pl.label === playerLabel && pl.side === 'offense');
+        if (!p) throw new Error('place: no player ' + playerLabel);
+        const dir = flipped ? -1 : 1;
+        p.x = losXSvg() + forwardYards * YARD * dir;
+        p.y = (FIELD_H / 2) + lateralYards * YARD;
+      }
+      // Build a route for a player directly from step-builder directions.
+      // steps is an array of { dx, dy } in screen-space yards (1 unit each).
+      function setRouteSteps(playerLabel, steps) {
+        const owner = players.find(p => p.label === playerLabel && p.side === 'offense');
+        if (!owner) throw new Error('setRouteSteps: no owner ' + playerLabel);
+        // Remove any existing route for this player
+        routes = routes.filter(r => r.ownerId !== owner.id);
+        const pts = [{ x: owner.x, y: owner.y }];
+        let lastDir = null;
+        steps.forEach(s => {
+          let svgDx = s.dx * YARD;
+          let svgDy = s.dy * YARD;
+          if (flipped) { svgDx = -svgDx; svgDy = -svgDy; }
+          const newDir = { dx: s.dx, dy: s.dy };
+          if (lastDir && lastDir.dx === newDir.dx && lastDir.dy === newDir.dy && pts.length >= 2) {
+            const last = pts[pts.length - 1];
+            pts[pts.length - 1] = { x: last.x + svgDx, y: last.y + svgDy };
+          } else {
+            const last = pts[pts.length - 1];
+            pts.push({ x: last.x + svgDx, y: last.y + svgDy });
+          }
+          lastDir = newDir;
+        });
+        routes.push({
+          id: nextRouteId++,
+          ownerId: owner.id,
+          points: pts,
+          smoothed: false,
+          branches: [],
+        });
+      }
+
+      // Run the builder with all helpers available
+      await builder({
+        rotateSegment, lengthenSegment, applyRouteByName, addBranchToPlayer,
+        rotateBranchSegment, setCapBoxes, nudgePlayer, placePlayer,
+        setRouteSteps, log,
+      });
+
+      log("saving payload");
+      const payload = getPlayPayload();
+      const payloadStr = JSON.stringify(payload);
+      const id = newId();
+      await storageSet(`plays:${id}`, payloadStr);
+      const newIdx = [...idx, { id, name: playName, savedAt: Date.now() }];
+      await setIndex('plays', newIdx);
+      log("Installed: " + playName);
+    } finally {
+      players = savedPlayers;
+      routes = savedRoutes;
+      losYards = savedLos;
+      if (flipped !== savedFlipped) flipDirection();
+      if (savedCapFills && typeof capBoxFills !== 'undefined') {
+        Object.keys(capBoxFills).forEach(k => delete capBoxFills[k]);
+        Object.entries(savedCapFills).forEach(([k, v]) => { capBoxFills[k] = v; });
+      }
+      if (typeof capBoxesOn !== 'undefined') capBoxesOn = savedCapOn;
+      if (typeof updateCapBoxes === 'function') updateCapBoxes();
+      render();
+      renderRoutes();
+    }
+  } catch (err) {
+    showHelper("INSTALL ERROR: " + (err && err.message ? err.message : String(err)), 8000);
+  }
+}
+
+// Legacy entry point: keep installing the Slot Cross play for back-compat
+async function installDemoPlays() {
+  await installSlotCrossPlay();
+  await installTwinRightTightSailPlay();
+  await installBunchMeshPlay();
+}
+
+async function installSlotCrossPlay() {
+  await installDemoPlay('Twins L Slot-Cross Option L', async (H) => {
+    const formation = FORMATION_LIBRARY.find(f => f.name === 'Twins Left Y Tight');
+    if (!formation) throw new Error('formation not found');
+    losYards = 35;
+    applyFormation(formation);
+
+    H.applyRouteByName('C', '1 - Arrow');
+    H.applyRouteByName('X', '8 - Post');
+    H.lengthenSegment('X', 1, 4);
+    H.rotateSegment('X', 1, -2 * 7);
+    H.applyRouteByName('Y', '2 - Slant');
+    H.lengthenSegment('Y', 1, 10);
+    H.rotateSegment('Y', 1, -2 * 7);
+    H.nudgePlayer('Z', 0, 2);
+    H.applyRouteByName('Z', '9 - Go');
+    H.lengthenSegment('Z', 0, -7);
+    const upBranch = [];
+    for (let i = 0; i < 12; i++) upBranch.push({ dx: 1, dy: 0 });
+    H.addBranchToPlayer('Z', upBranch);
+    const upLeftBranch = [];
+    for (let i = 0; i < 4; i++) upLeftBranch.push({ dx: 1, dy: 0 });
+    for (let i = 0; i < 6; i++) upLeftBranch.push({ dx: 0, dy: -1 });
+    H.addBranchToPlayer('Z', upLeftBranch);
+
+    const C = { red: '#ff4444', green: '#7ed957', yellow: '#ffd84d', blue: '#4a90e2' };
+    H.setCapBoxes({
+      '0,2': C.red,   '1,2': C.green, '2,2': C.yellow,
+      '0,1': C.red,   '1,1': C.green, '2,1': C.yellow,
+      '2,0': C.blue,
+    });
+  });
+}
+
+async function installTwinRightTightSailPlay() {
+  await installDemoPlay('Twins R Tight Sail R C-Option', async (H) => {
+    const formation = FORMATION_LIBRARY.find(f => f.name === 'Twins Right Tight');
+    if (!formation) throw new Error('Twins Right Tight formation not found');
+    losYards = 35;
+    applyFormation(formation);
+
+    // X: Corner + Longer 2 + Shallower 2 on the break segment (segment 1)
+    H.applyRouteByName('X', '7 - Corner');
+    H.lengthenSegment('X', 1, 2);
+    H.rotateSegment('X', 1, -2 * 7);  // Shallower×2 = -14°
+
+    // Y: Arrow (curve route)
+    H.applyRouteByName('Y', '1 - Arrow');
+
+    // Z: Slant + Longer 8 + Shallower 1 on break segment 1
+    H.applyRouteByName('Z', '2 - Slant');
+    H.lengthenSegment('Z', 1, 8);
+    H.rotateSegment('Z', 1, -1 * 7);  // Shallower×1 = -7°
+
+    // C: Go + Shorter 7 + 5 option branches
+    H.applyRouteByName('C', '9 - Go');
+    H.lengthenSegment('C', 0, -7);  // 5y stem
+    // Branch 1: 12 up
+    const b1 = [];
+    for (let i = 0; i < 12; i++) b1.push({ dx: 1, dy: 0 });
+    H.addBranchToPlayer('C', b1);
+    // Branch 2: 5 up + 2 down-right (↘)
+    const b2 = [];
+    for (let i = 0; i < 5; i++) b2.push({ dx: 1, dy: 0 });
+    for (let i = 0; i < 2; i++) b2.push({ dx: -1, dy: 1 });
+    H.addBranchToPlayer('C', b2);
+    // Branch 3: 5 up + 2 down-left (↙)
+    const b3 = [];
+    for (let i = 0; i < 5; i++) b3.push({ dx: 1, dy: 0 });
+    for (let i = 0; i < 2; i++) b3.push({ dx: -1, dy: -1 });
+    H.addBranchToPlayer('C', b3);
+    // Branch 4: 5 up + 8 left (◀)
+    const b4 = [];
+    for (let i = 0; i < 5; i++) b4.push({ dx: 1, dy: 0 });
+    for (let i = 0; i < 8; i++) b4.push({ dx: 0, dy: -1 });
+    H.addBranchToPlayer('C', b4);
+    // Branch 5: 5 up + 8 up-left (↖) + Shallower 2 on last segment
+    const b5 = [];
+    for (let i = 0; i < 5; i++) b5.push({ dx: 1, dy: 0 });
+    for (let i = 0; i < 8; i++) b5.push({ dx: 1, dy: -1 });
+    const branch5Idx = H.addBranchToPlayer('C', b5);
+    // The branch has 2 segments: [anchor → end-of-5-up], [end-of-5-up → end-of-8-up-left]
+    // Rotate segment 1 (the up-left one) by Shallower×2 = -14°
+    H.rotateBranchSegment('C', branch5Idx, 1, -2 * 7);
+
+    const C = { red: '#ff4444', green: '#7ed957', yellow: '#ffd84d', blue: '#4a90e2' };
+    // Top row: blue, blue, green  → col=2
+    // Middle row: blue, blue, red → col=1
+    // Bottom row: blank, blank, yellow → col=0
+    H.setCapBoxes({
+      '0,2': C.blue,   '1,2': C.blue, '2,2': C.green,
+      '0,1': C.blue,   '1,1': C.blue, '2,1': C.red,
+      '2,0': C.yellow,
+    });
+  });
+}
+
+async function installBunchMeshPlay() {
+  await installDemoPlay('Bunch R Mesh', async (H) => {
+    // Start from a known formation, then hand-place into a Bunch Right + X iso left.
+    const base = FORMATION_LIBRARY.find(f => f.name === 'Twins Right');
+    if (base) applyFormation(base);
+    losYards = 35;
+    if (base) applyFormation(base);
+
+    // Convention: lateral +y = bottom of screen = offense's RIGHT.
+    // Bunch to the RIGHT (cluster of Z, Y, on the right), X isolated LEFT,
+    // C near center on the LOS (late release), QB shotgun.
+    H.placePlayer('C',  0,  -1);   // on LOS, just left of center
+    H.placePlayer('QB', -6, -1);   // shotgun, 6y behind C
+    // Bunch cluster on the right side:
+    H.placePlayer('Z',  0,   8);   // point of bunch, on LOS, 8y right
+    H.placePlayer('Y',  1,  11);   // apex, 1y off LOS, 11y right
+    // X isolated on the far LEFT (backside):
+    H.placePlayer('X',  0,  -16);
+
+    // ---- MESH: two shallow crossers passing within ~1y of each other ----
+    // X (far left) runs a shallow crosser LEFT→RIGHT at ~4y depth.
+    //   3y up stem, then drive across to the right (+y) staying shallow.
+    const xMesh = [];
+    for (let i = 0; i < 3; i++) xMesh.push({ dx: 1, dy: 0 });    // 3y release upfield
+    for (let i = 0; i < 22; i++) xMesh.push({ dx: 0, dy: 1 });   // cross to the right 22y
+    for (let i = 0; i < 2; i++) xMesh.push({ dx: 1, dy: 0 });    // climb at the end
+    H.setRouteSteps('X', xMesh);
+
+    // Z (bunch right) runs a shallow crosser RIGHT→LEFT at ~5y depth — one yard
+    // deeper than X so they mesh cleanly without colliding.
+    const zMesh = [];
+    for (let i = 0; i < 4; i++) zMesh.push({ dx: 1, dy: 0 });    // 4y release
+    for (let i = 0; i < 22; i++) zMesh.push({ dx: 0, dy: -1 });  // cross to the left 22y
+    for (let i = 0; i < 2; i++) zMesh.push({ dx: 1, dy: 0 });    // climb at the end
+    H.setRouteSteps('Z', zMesh);
+
+    // Y (bunch apex) runs a vertical Go to clear the deep middle/right.
+    H.applyRouteByName('Y', '9 - Go');
+
+    // C: late release, sits in the middle at ~6y as the safety valve, with an
+    // option branch breaking either way (sit, then break to open grass).
+    const cStem = [];
+    for (let i = 0; i < 6; i++) cStem.push({ dx: 1, dy: 0 });   // up 6y, sit
+    H.setRouteSteps('C', cStem);
+    // Option branch 1: continue to the right (toward bunch side void)
+    const cRight = [];
+    for (let i = 0; i < 6; i++) cRight.push({ dx: 0, dy: 1 });
+    H.addBranchToPlayer('C', cRight);
+    // Option branch 2: break to the left (away from bunch side)
+    const cLeft = [];
+    for (let i = 0; i < 6; i++) cLeft.push({ dx: 0, dy: -1 });
+    H.addBranchToPlayer('C', cLeft);
+
+    // Cap-box read aid (man-coverage emphasis): highlight the shallow middle
+    // where the mesh works. Color the near-LOS middle column.
+    const COL = { red: '#ff4444', green: '#7ed957', yellow: '#ffd84d', blue: '#4a90e2' };
+    H.setCapBoxes({
+      '0,0': COL.green, '1,0': COL.green, '2,0': COL.green,  // shallow band (mesh zone)
+    });
+  });
+}
+
+drawYardLines();
+drawHashMarks();
+buildColorGrid();
+loadDefault();
+loadFormationLibrary();
+// Demo play install is manual via MENU → Install Demo Play
+showHelper("Drag players • Drag the C to move LOS", 2800);
+// Ensure camera is applied after first paint (viewport measurements may be 0 initially)
+requestAnimationFrame(() => applyCamera());
+setTimeout(applyCamera, 100);
+
+// ── Register service worker (offline support + installable app) ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode just won't be available */ });
+  });
+}
+</script>
+</body>
+</html>
