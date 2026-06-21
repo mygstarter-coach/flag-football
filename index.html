@@ -2,20 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>5v5 Flag — Play Designer</title>
-
-<!-- ── Installable-app (PWA) setup ───────────────────────────────── -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0e0f10">
-<!-- iOS home-screen app -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="5v5 Flag">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" type="image/png" href="icon-192.png">
-<!-- ──────────────────────────────────────────────────────────────── -->
 <style>
   :root {
     --field-green: #2d5a3d;
@@ -985,6 +973,31 @@
     font-size: 12px;
     cursor: pointer;
   }
+  /* Authoring banner — distinct color so it's clear we're in author mode */
+  .author-banner {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4a90e2;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 800;
+    z-index: 35;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .author-banner.show { display: flex; }
+  /* Coverage button active state — highlighted when we're viewing a variant */
+  #coverageBtn.active-c2 { background: #ffd84d; color: #000; border-color: #ffd84d; }
+  #coverageBtn.active-c3 { background: #7ed957; color: #000; border-color: #7ed957; }
+  #coverageBtn.active-blitz { background: #ff5e5e; color: #000; border-color: #ff5e5e; }
 
   @media (max-width: 700px) {
     .topbar { padding: 0 8px; gap: 6px; }
@@ -1008,6 +1021,12 @@
         <button class="menu-item" id="loadPlayBtn">📂 Load Play</button>
         <button class="menu-item" id="installDemoBtn">⬇ Install Demo Play</button>
         <div class="menu-divider"></div>
+        <button class="menu-item" id="authorC2Btn">📐 Author Cover 2 Variant</button>
+        <button class="menu-item" id="authorC3Btn">📐 Author Cover 3 Variant</button>
+        <button class="menu-item" id="authorBlitzBtn">📐 Author Blitz Variant</button>
+        <button class="menu-item" id="saveVariantBtn">💾 Save Coverage Variant</button>
+        <button class="menu-item" id="cancelAuthorBtn">✕ Cancel Authoring</button>
+        <div class="menu-divider"></div>
         <button class="menu-item" id="pickFormBtn">📋 Pick Formation</button>
         <button class="menu-item" id="saveFormBtn">💾 Save Formation</button>
         <div class="menu-divider"></div>
@@ -1022,6 +1041,17 @@
         <div class="menu-divider"></div>
         <button class="menu-item" id="defaultBtn">Reset Offense</button>
         <button class="menu-item" id="resetBtn">Clear Field</button>
+      </div>
+    </div>
+    <button class="top-btn" id="playsBtn">📂 PLAYS</button>
+    <div class="flip-menu-wrap">
+      <button class="top-btn" id="coverageBtn">🛡 COVERAGE ▾</button>
+      <div class="flip-menu-panel" id="coverageMenu">
+        <button class="flip-menu-item" id="coverBaseBtn">↩ Base Play</button>
+        <button class="flip-menu-item" id="coverC2Btn">▲▲ Cover 2</button>
+        <button class="flip-menu-item" id="coverC3Btn">▲▲▲ Cover 3</button>
+        <button class="flip-menu-item" id="coverBlitzBtn">⚡ Blitz</button>
+        <button class="flip-menu-item" id="trianglesBtn">◆ Toggle Triangles</button>
       </div>
     </div>
     <div class="flip-menu-wrap">
@@ -1052,6 +1082,10 @@
         <span id="drawBannerText">Drag from the player to draw a route</span>
         <span class="cancel-x" id="drawCancel">✕</span>
       </div>
+      <div class="author-banner" id="authorBanner">
+        <span id="authorBannerText">Authoring Cover 2 variant. Save when ready.</span>
+        <span class="cancel-x" id="authorCancel">✕</span>
+      </div>
 
       <div class="field-viewport" id="fieldViewport">
         <div class="field-wrap" id="fieldWrap">
@@ -1072,6 +1106,7 @@
             <g id="hashMarks"></g>
             <line id="rushLine" stroke="#ffd84d" stroke-width="0.15" opacity="1"/>
             <g id="capBoxes" style="display:none"></g>
+            <g id="triangles" style="display:none"></g>
             <g id="playNameLabel" style="display:none"></g>
           </svg>
 
@@ -1199,6 +1234,16 @@ let cameraFollowsLos = true;  // when true, show 40y window centered around LOS
 let capBoxesOn = false;       // overlay 3x3 grid 20y forward of LOS
 let currentPlayName = null;   // name of last loaded play (shown above top cap boxes)
 let playNameFlipped = false;  // when true, isolated L/R in the name are swapped
+// COVERAGE VARIANTS
+//  When a play is loaded, we keep a snapshot of its BASE state and any saved
+//  variants for cover2/cover3. The user can switch among them at game time.
+let basePlaySnapshot = null;          // the base play payload (re-applyable)
+let cover2Variant = null;             // saved variant payload for Cover 2 (or null)
+let cover3Variant = null;             // saved variant payload for Cover 3 (or null)
+let blitzVariant = null;              // saved variant payload for Blitz (or null)
+let currentCoverage = 'base';         // 'base' | 'cover2' | 'cover3' | 'blitz'
+let authoringCoverage = null;         // null | 'cover2' | 'cover3' | 'blitz' when authoring
+let trianglesOn = false;              // show outside-WR triangles overlay
 let capBoxFills = {};         // key "row,col" → color hex (or undefined for none)
 
 const CAMERA_YARDS_BEHIND_LOS = 7;
@@ -1312,6 +1357,13 @@ function updateLos() {
 }
 
 function updatePlayNameLabel() {
+  // Play name label on field is disabled. Just clear the SVG group.
+  try {
+    const g = document.getElementById('playNameLabel');
+    if (g) { g.innerHTML = ''; g.style.display = 'none'; }
+  } catch(_) {}
+}
+function _updatePlayNameLabel_DISABLED() {
   try {
     const g = document.getElementById('playNameLabel');
     if (!g) return;
@@ -1366,10 +1418,10 @@ function updateCapBoxes() {
   }
   g.style.display = '';
 
-  // Grid: 3 across (width) × 3 deep (along field). 20y forward of LOS, full width.
+  // Grid: 3 across (width) × 3 deep (along field). 15y forward of LOS, full width.
   const widthBoxes = 3;
   const depthBoxes = 3;
-  const totalDepth_svg = 20 * YARD;
+  const totalDepth_svg = 15 * YARD;
   const totalWidth_svg = FIELD_H;
   const depthStep = totalDepth_svg / depthBoxes;
   const widthStep = totalWidth_svg / widthBoxes;
@@ -1386,15 +1438,21 @@ function updateCapBoxes() {
   const strokeWidth = 0.18;
 
   // 1) Render filled cells FIRST (so the lines on top look crisp).
-  // Each cell is a tappable rect.
+  //    Cell depth boundaries: 0-5y, 5-10y, 10-15y.
+  //    Cell width boundaries are 3 equal lateral columns.
+  const colDepthsYards = [0, 5, 10, 15];  // boundaries (4 values → 3 cells)
   for (let row = 0; row < widthBoxes; row++) {
     for (let col = 0; col < depthBoxes; col++) {
       const key = `${row},${col}`;
       const fill = capBoxFills[key];
+      const colStart = colDepthsYards[col]     * YARD;
+      const colEnd   = colDepthsYards[col + 1] * YARD;
+      const cellX    = losXSvg() + dir * (dir > 0 ? colStart : colEnd);
+      const cellW    = (colEnd - colStart);
       const rect = document.createElementNS(ns, 'rect');
-      rect.setAttribute('x', x0 + col * depthStep);
+      rect.setAttribute('x', cellX);
       rect.setAttribute('y', y0 + row * widthStep);
-      rect.setAttribute('width', depthStep);
+      rect.setAttribute('width', cellW);
       rect.setAttribute('height', widthStep);
       rect.setAttribute('fill', fill || 'transparent');
       rect.setAttribute('fill-opacity', fill ? 0.3 : 0);
@@ -1408,9 +1466,11 @@ function updateCapBoxes() {
     }
   }
 
-  // 2) Inner grid lines on top (skip outer borders)
-  for (let i = 1; i < depthBoxes; i++) {
-    const x = x0 + i * depthStep;
+  // 2) Depth band lines: exactly TWO lines, at 5y and 10y forward of LOS,
+  //    spanning the full field width.
+  const depthLineYards = [5, 10];
+  depthLineYards.forEach(yds => {
+    const x = losXSvg() + dir * yds * YARD;
     const ln = document.createElementNS(ns, 'line');
     ln.setAttribute('x1', x); ln.setAttribute('y1', y0);
     ln.setAttribute('x2', x); ln.setAttribute('y2', y0 + totalWidth_svg);
@@ -1419,7 +1479,8 @@ function updateCapBoxes() {
     ln.setAttribute('opacity', 0.95);
     ln.style.pointerEvents = 'none';
     g.appendChild(ln);
-  }
+  });
+  // 3) Lateral column dividers — 2 inner lines (3 columns), full 20y depth.
   for (let i = 1; i < widthBoxes; i++) {
     const y = y0 + i * widthStep;
     const ln = document.createElementNS(ns, 'line');
@@ -1654,11 +1715,32 @@ function loadDefaultDefense() {
     return owner && owner.side !== 'defense';
   });
   const losX = losXSvg();
-  addPlayer('defense', losX + 7 * YARD,  12,   'CB', '#4a90e2');
-  addPlayer('defense', losX + 7 * YARD,  41,   'CB', '#4a90e2');
-  addPlayer('defense', losX + 7 * YARD,  19,   'LB', '#4a90e2');
-  addPlayer('defense', losX + 7 * YARD,  34,   'LB', '#4a90e2');
-  addPlayer('defense', losX + 10 * YARD, 26.5, 'S',  '#4a90e2');
+  // CBs nudged up 4y
+  addPlayer('defense', losX + 11 * YARD, 12,             'CB', '#4a90e2');
+  addPlayer('defense', losX + 11 * YARD, 41,             'CB', '#4a90e2');
+  // LBs nudged down 2y, left/right 2y
+  addPlayer('defense', losX + 5  * YARD, 19 - 2 * YARD,  'LB', '#4a90e2');
+  addPlayer('defense', losX + 5  * YARD, 34 + 2 * YARD,  'LB', '#4a90e2');
+  // S nudged up 1y, left 1y
+  addPlayer('defense', losX + 11 * YARD, 26.5 - 1 * YARD,'S',  '#4a90e2');
+}
+
+function loadBlitzDefense() {
+  // Blitz look: Cover 3 alignment but only ONE LB (centered between the two
+  // Cover-3 LB positions). 2 CBs + 1 LB + 1 S = 4 defenders.
+  players = players.filter(p => p.side !== 'defense');
+  routes = routes.filter(r => {
+    const owner = players.find(p => p.id === r.ownerId);
+    return owner && owner.side !== 'defense';
+  });
+  const losX = losXSvg();
+  // CBs same as Cover 3
+  addPlayer('defense', losX + 11 * YARD, 12,             'CB', '#4a90e2');
+  addPlayer('defense', losX + 11 * YARD, 41,             'CB', '#4a90e2');
+  // Single LB centered (depth same as Cover 3 LBs at 5y forward, lateral = midfield)
+  addPlayer('defense', losX + 5  * YARD, 26.5,           'LB', '#4a90e2');
+  // S same as Cover 3
+  addPlayer('defense', losX + 11 * YARD, 26.5 - 1 * YARD,'S',  '#4a90e2');
 }
 
 function addPlayer(side, x, y, label, color, isLosHandle) {
@@ -1747,6 +1829,9 @@ function updateTokenPosition(id) {
   if (!el) return;
   el.style.left = (p.x / FIELD_W * 100) + '%';
   el.style.top  = (p.y / FIELD_H * 100) + '%';
+  // Triangles depend on player positions (defenders + outside WRs), so keep
+  // them in sync as anything drags.
+  if (trianglesOn) renderOutsideWRTriangles();
 }
 
 function colorLum(hex) {
@@ -1872,8 +1957,78 @@ function arrowAtEnd(pts, color) {
   return `M ${tipX} ${tipY} L ${x2} ${y2} L ${x3} ${y3} Z`;
 }
 
+// Draw a triangle around each outside WR using their safety + the 2 closest
+// non-S defenders. The "outside WRs" are the two offensive players furthest
+// from the field's lateral center, regardless of label.
+function renderOutsideWRTriangles() {
+  const g = document.getElementById('triangles');
+  if (!g) return;
+  g.innerHTML = '';
+  if (!trianglesOn) {
+    g.style.display = 'none';
+    return;
+  }
+  g.style.display = '';
+  const offense = players.filter(p => p.side === 'offense');
+  const defense = players.filter(p => p.side === 'defense');
+  if (offense.length < 1 || defense.length < 3) return;
+  const cy = FIELD_H / 2;
+  // Sort offense by lateral distance from center (farthest first)
+  const offByLat = offense.slice().sort((a, b) =>
+    Math.abs(b.y - cy) - Math.abs(a.y - cy));
+  // The two "outside" WRs: one with smallest y (top) and one with largest y
+  // among the outside group. Take the two extreme players.
+  const sortedY = offense.slice().sort((a, b) => a.y - b.y);
+  const topWR = sortedY[0];
+  const botWR = sortedY[sortedY.length - 1];
+  // Don't draw if both extremes happen to be the same point
+  if (topWR.id === botWR.id) return;
+
+  function drawTriangleFor(wr) {
+    // Find nearest S to this WR (by Euclidean distance)
+    const safeties = defense.filter(d => d.label === 'S');
+    if (safeties.length === 0) return;
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    safeties.sort((a, b) => dist(a, wr) - dist(b, wr));
+    const s = safeties[0];
+    // BLITZ rule: if there's exactly one LB on the field, both triangles use
+    // that LB plus the WR's nearest CB. Otherwise general rule (2 closest
+    // non-S defenders).
+    const lbs = defense.filter(d => d.label === 'LB');
+    let a, b;
+    if (lbs.length === 1) {
+      const lb = lbs[0];
+      const cbs = defense.filter(d => d.label === 'CB');
+      if (cbs.length === 0) return;
+      cbs.sort((c1, c2) => dist(c1, wr) - dist(c2, wr));
+      a = lb; b = cbs[0];
+    } else {
+      const others = defense.filter(d => d.id !== s.id);
+      others.sort((d1, d2) => dist(d1, wr) - dist(d2, wr));
+      if (others.length < 2) return;
+      a = others[0]; b = others[1];
+    }
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points',
+      s.x + ',' + s.y + ' ' +
+      a.x + ',' + a.y + ' ' +
+      b.x + ',' + b.y);
+    poly.setAttribute('fill', wr.color);
+    poly.setAttribute('fill-opacity', '0.30');
+    poly.setAttribute('stroke', wr.color);
+    poly.setAttribute('stroke-width', '0.25');
+    poly.setAttribute('stroke-linejoin', 'round');
+    poly.style.pointerEvents = 'none';
+    g.appendChild(poly);
+  }
+
+  drawTriangleFor(topWR);
+  drawTriangleFor(botWR);
+}
+
 function renderRoutes() {
   routesGroup.innerHTML = '';
+  renderOutsideWRTriangles();
   routes.forEach(r => {
     const owner = players.find(p => p.id === r.ownerId);
     if (!owner) return;
@@ -2992,6 +3147,12 @@ document.getElementById('capBoxesBtn').addEventListener('click', () => {
   updateCapBoxes();
   showHelper(capBoxesOn ? "Cap boxes ON" : "Cap boxes OFF");
 });
+document.getElementById('trianglesBtn').addEventListener('click', () => {
+  coverageMenu.classList.remove('open');
+  trianglesOn = !trianglesOn;
+  renderRoutes();
+  showHelper(trianglesOn ? "Triangles ON" : "Triangles OFF");
+});
 document.getElementById('resetBtn').addEventListener('click', () => {
   closeMenu();
   players = []; routes = []; selectedId = null; selectedRouteId = null;
@@ -3994,6 +4155,9 @@ function getPlayPayload() {
   const offense = players.filter(p => p.side === 'offense');
   const offenseIds = new Set(offense.map(p => p.id));
   const offenseRoutes = routes.filter(r => offenseIds.has(r.ownerId));
+  // Snapshot the defense too — variants need this since each variant has its
+  // own defense alignment.
+  const defense = players.filter(p => p.side === 'defense');
   return {
     losYards,
     flipped,
@@ -4007,8 +4171,18 @@ function getPlayPayload() {
         smoothed: !!br.smoothed,
       })),
     })),
+    defense: defense.map(p => ({
+      ...p,
+      relX: p.x - losXSvg(),  // relative to LOS so it follows it
+      relY: p.y,
+    })),
     capBoxes: typeof capBoxFills !== 'undefined' ? { ...capBoxFills } : {},
     capBoxesOn,
+    // Coverage variants (each is a recursive payload of the same shape,
+    // captured at the time of authoring)
+    cover2Variant,
+    cover3Variant,
+    blitzVariant,
   };
 }
 function getDefensePayload() {
@@ -4033,12 +4207,10 @@ function getDefensePayload() {
 
 // ---- Apply payloads ----
 function applyPlayPayload(p) {
-  // Replace offense (and their routes) with loaded data
-  players = players.filter(pl => pl.side !== 'offense');
-  routes = routes.filter(r => {
-    const owner = players.find(pp => pp.id === r.ownerId);
-    return owner; // keep only routes that still have an owner (defense)
-  });
+  // Replace offense AND defense (and their routes) with loaded data.
+  players = players.filter(pl => pl.side !== 'offense' && pl.side !== 'defense');
+  // Drop any routes whose owner no longer exists.
+  routes = routes.filter(r => players.find(pp => pp.id === r.ownerId));
 
   // Re-add offense players (preserve their original IDs for route mapping)
   const idMap = {};
@@ -4053,7 +4225,7 @@ function applyPlayPayload(p) {
     players.push(newPlayer);
     idMap[pl.id] = newPlayer.id;
   });
-  // Re-add routes
+  // Re-add offense routes
   p.routes.forEach(r => {
     routes.push({
       id: nextRouteId++,
@@ -4066,11 +4238,24 @@ function applyPlayPayload(p) {
       })),
     });
   });
-  // Restore LOS
+  // Restore LOS BEFORE adding defense (so relX/relY anchors correctly).
   losYards = p.losYards;
   // Restore flip state
   if (!!p.flipped !== flipped) {
     flipDirection();
+  }
+  // Re-add defense (positions stored relative to LOS)
+  if (Array.isArray(p.defense)) {
+    const losX = losXSvg();
+    p.defense.forEach(pl => {
+      players.push({
+        id: nextId++,
+        side: 'defense',
+        x: losX + (pl.relX !== undefined ? pl.relX : (pl.x - losX)),
+        y: pl.relY !== undefined ? pl.relY : pl.y,
+        label: pl.label, color: pl.color,
+      });
+    });
   }
   // Restore cap boxes
   if (p.capBoxes && typeof capBoxFills !== 'undefined') {
@@ -4081,6 +4266,15 @@ function applyPlayPayload(p) {
     capBoxesOn = !!p.capBoxesOn;
     updateCapBoxes && updateCapBoxes();
   }
+  // Restore coverage variants (these are payloads themselves)
+  cover2Variant = p.cover2Variant || null;
+  cover3Variant = p.cover3Variant || null;
+  blitzVariant  = p.blitzVariant  || null;
+  currentCoverage = 'base';
+  // Take a fresh snapshot of the base play AFTER everything is applied,
+  // so future coverage swaps can revert cleanly.
+  basePlaySnapshot = getPlayPayload();
+  updateCoverageButton && updateCoverageButton();
 }
 function applyDefensePayload(d) {
   // Replace defense (and their routes)
@@ -4160,12 +4354,15 @@ function escapeHtml(s) {
 async function showSaveDialog(kind, getPayloadFn) {
   // kind: 'plays' or 'defenses'
   const isPlay = kind === 'plays';
+  // Pre-fill with current play name (if any) so the user can just hit Save
+  // to overwrite. Changing the name and saving creates a new play.
+  const prefill = (isPlay && currentPlayName) ? escapeHtmlAttr(currentPlayName) : '';
   openModal(isPlay ? 'Save Play' : 'Save Defense',
     `<label>Name</label>
-     <input type="text" id="saveName" placeholder="${isPlay ? 'e.g. Slant Flat Right' : 'e.g. Cover 0 Blitz'}" maxlength="40" autocomplete="off" autocorrect="off">
+     <input type="text" id="saveName" placeholder="${isPlay ? 'e.g. Slant Flat Right' : 'e.g. Cover 0 Blitz'}" value="${prefill}" maxlength="40" autocomplete="off" autocorrect="off">
      <p style="margin-top:12px;color:var(--text-dim);font-size:11px;">
        ${isPlay
-        ? 'Saves the current offense and routes.'
+        ? 'Same name as an existing play OVERWRITES it. New name creates a new play.'
         : 'Saves the current defense (positions relative to LOS).'}
      </p>`,
     {
@@ -4176,24 +4373,44 @@ async function showSaveDialog(kind, getPayloadFn) {
           showHelper("Name is required");
           return;
         }
-        const id = newId();
+        const idx = await getIndex(kind);
         const payload = getPayloadFn();
+        // Look for an existing entry with the same (case-insensitive) name.
+        const existing = idx.find(it => it.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+          // Overwrite: keep the same id, update the payload, refresh savedAt.
+          const ok = await storageSet(`${kind}:${existing.id}`, JSON.stringify(payload));
+          if (!ok) {
+            showHelper("Save failed");
+            closeModal();
+            return;
+          }
+          existing.savedAt = Date.now();
+          existing.name = name;  // refresh casing in case the user retyped it
+          await setIndex(kind, idx);
+          if (isPlay) currentPlayName = name;
+          closeModal();
+          showHelper(`Updated "${name}"`);
+          return;
+        }
+        // New entry: fresh id.
+        const id = newId();
         const ok = await storageSet(`${kind}:${id}`, JSON.stringify(payload));
         if (!ok) {
           showHelper("Save failed");
           closeModal();
           return;
         }
-        const idx = await getIndex(kind);
         idx.unshift({ id, name, savedAt: Date.now() });
         await setIndex(kind, idx);
+        if (isPlay) currentPlayName = name;
         closeModal();
         showHelper(`Saved "${name}"`);
       }
     });
 }
 
-async function showLoadDialog(kind, applyFn) {
+async function showLoadDialog(kind, applyFn, titleOverride) {
   const isPlay = kind === 'plays';
   const idx = await getIndex(kind);
   let body;
@@ -4210,7 +4427,8 @@ async function showLoadDialog(kind, applyFn) {
       </li>`).join('');
     body = `<ul class="saved-list">${rows}</ul>`;
   }
-  openModal(isPlay ? 'Load Play' : 'Load Defense', body, {
+  const title = titleOverride || (isPlay ? 'Load Play' : 'Load Defense');
+  openModal(title, body, {
     hideConfirm: true,
   });
 
@@ -4260,6 +4478,216 @@ document.getElementById('loadPlayBtn').addEventListener('click', () => {
   closeMenu();
   showLoadDialog('plays', applyPlayPayload);
 });
+document.getElementById('playsBtn').addEventListener('click', () => {
+  showLoadDialog('plays', applyPlayPayload, 'Plays');
+});
+
+//=========================================================================
+// COVERAGE VARIANTS — top-bar dropdown, authoring flow
+//=========================================================================
+const coverageMenu = document.getElementById('coverageMenu');
+const authorBanner = document.getElementById('authorBanner');
+const authorBannerText = document.getElementById('authorBannerText');
+
+// Toggle coverage dropdown
+document.getElementById('coverageBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  coverageMenu.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!coverageMenu.classList.contains('open')) return;
+  const inside = coverageMenu.contains(e.target) ||
+                 document.getElementById('coverageBtn').contains(e.target);
+  if (!inside) coverageMenu.classList.remove('open');
+});
+
+// Visual indicator for active coverage on the button
+function updateCoverageButton() {
+  const btn = document.getElementById('coverageBtn');
+  if (!btn) return;
+  btn.classList.remove('active-c2', 'active-c3', 'active-blitz');
+  if (currentCoverage === 'cover2') btn.classList.add('active-c2');
+  else if (currentCoverage === 'cover3') btn.classList.add('active-c3');
+  else if (currentCoverage === 'blitz') btn.classList.add('active-blitz');
+}
+
+// Apply a coverage view (game-day workflow)
+function applyCoverage(which) {
+  if (authoringCoverage) {
+    showHelper("Save or cancel the variant first");
+    return;
+  }
+  if (!basePlaySnapshot) {
+    showHelper("Load a play first");
+    return;
+  }
+  if (which === 'base') {
+    applyPlayPayload(basePlaySnapshot);
+    cover2Variant = basePlaySnapshot.cover2Variant || null;
+    cover3Variant = basePlaySnapshot.cover3Variant || null;
+    blitzVariant  = basePlaySnapshot.blitzVariant  || null;
+    currentCoverage = 'base';
+    render(); renderRoutes();
+    updateCoverageButton();
+    showHelper("Base play");
+    return;
+  }
+  // For coverage variants, apply the variant if it exists; otherwise apply
+  // base and overlay the default defense for that coverage.
+  const variant = (which === 'cover2') ? cover2Variant
+                 : (which === 'cover3') ? cover3Variant
+                 : (which === 'blitz')  ? blitzVariant
+                 : null;
+  if (variant) {
+    applyPlayPayload(variant);
+    cover2Variant = basePlaySnapshot.cover2Variant || null;
+    cover3Variant = basePlaySnapshot.cover3Variant || null;
+    blitzVariant  = basePlaySnapshot.blitzVariant  || null;
+    currentCoverage = which;
+  } else {
+    applyPlayPayload(basePlaySnapshot);
+    cover2Variant = basePlaySnapshot.cover2Variant || null;
+    cover3Variant = basePlaySnapshot.cover3Variant || null;
+    blitzVariant  = basePlaySnapshot.blitzVariant  || null;
+    if (which === 'cover2')     loadCover2Defense();
+    else if (which === 'cover3') loadDefaultDefense();
+    else if (which === 'blitz')  loadBlitzDefense();
+    currentCoverage = which;
+  }
+  render(); renderRoutes();
+  updateCoverageButton();
+  const label = which === 'cover2' ? "Cover 2 view"
+              : which === 'cover3' ? "Cover 3 view"
+              : "Blitz view";
+  showHelper(label);
+}
+
+document.getElementById('coverBaseBtn').addEventListener('click', () => {
+  coverageMenu.classList.remove('open');
+  applyCoverage('base');
+});
+document.getElementById('coverC2Btn').addEventListener('click', () => {
+  coverageMenu.classList.remove('open');
+  applyCoverage('cover2');
+});
+document.getElementById('coverC3Btn').addEventListener('click', () => {
+  coverageMenu.classList.remove('open');
+  applyCoverage('cover3');
+});
+document.getElementById('coverBlitzBtn').addEventListener('click', () => {
+  coverageMenu.classList.remove('open');
+  applyCoverage('blitz');
+});
+
+// Cover 2 default defense (mirrors triangle-system)
+function loadCover2Defense() {
+  players = players.filter(p => p.side !== 'defense');
+  routes = routes.filter(r => {
+    const owner = players.find(p => p.id === r.ownerId);
+    return owner && owner.side !== 'defense';
+  });
+  const losX = losXSvg();
+  addPlayer('defense', losX + 14 * YARD, 26.5 - 10 * YARD, 'S',  '#4a90e2');
+  addPlayer('defense', losX + 14 * YARD, 26.5 + 10 * YARD, 'S',  '#4a90e2');
+  // LBs at 5y forward of LOS, with lateral nudges:
+  //   top LB nudged left 3y    (-3y in svg-y)
+  //   middle LB nudged left 1y (-1y)
+  //   bottom LB nudged right 3y (+3y)
+  addPlayer('defense', losX + 5  * YARD, 26.5 - 10 * YARD - 3 * YARD, 'LB', '#4a90e2');
+  addPlayer('defense', losX + 5  * YARD, 26.5             - 1 * YARD, 'LB', '#4a90e2');
+  addPlayer('defense', losX + 5  * YARD, 26.5 + 10 * YARD + 3 * YARD, 'LB', '#4a90e2');
+}
+
+//---- Authoring flow ----
+function startAuthoring(which) {
+  if (!basePlaySnapshot) {
+    showHelper("Load a play first");
+    return;
+  }
+  authoringCoverage = which;
+  // Apply base play, then add the default defense for this coverage.
+  applyPlayPayload(basePlaySnapshot);
+  cover2Variant = basePlaySnapshot.cover2Variant || null;
+  cover3Variant = basePlaySnapshot.cover3Variant || null;
+  blitzVariant  = basePlaySnapshot.blitzVariant  || null;
+  if (which === 'cover2')      loadCover2Defense();
+  else if (which === 'cover3') loadDefaultDefense();
+  else if (which === 'blitz')  loadBlitzDefense();
+  render(); renderRoutes();
+  const label = which === 'cover2' ? 'Cover 2'
+              : which === 'cover3' ? 'Cover 3'
+              : 'Blitz';
+  authorBannerText.textContent =
+    'Authoring ' + label + ' variant. Tweak routes/defense, then Save.';
+  authorBanner.classList.add('show');
+}
+
+function saveAuthoring() {
+  if (!authoringCoverage) {
+    showHelper("Not authoring — choose Author Cover 2 / 3 / Blitz first");
+    return;
+  }
+  const snapshot = getPlayPayload();
+  // Don't recurse: strip variant references from the snapshot before storing.
+  snapshot.cover2Variant = null;
+  snapshot.cover3Variant = null;
+  snapshot.blitzVariant  = null;
+  if (authoringCoverage === 'cover2')      cover2Variant = snapshot;
+  else if (authoringCoverage === 'cover3') cover3Variant = snapshot;
+  else if (authoringCoverage === 'blitz')  blitzVariant  = snapshot;
+  // Also persist into the base snapshot so future Save Play captures them.
+  if (basePlaySnapshot) {
+    basePlaySnapshot.cover2Variant = cover2Variant;
+    basePlaySnapshot.cover3Variant = cover3Variant;
+    basePlaySnapshot.blitzVariant  = blitzVariant;
+  }
+  const which = authoringCoverage;
+  authoringCoverage = null;
+  authorBanner.classList.remove('show');
+  const label = which === 'cover2' ? 'Cover 2'
+              : which === 'cover3' ? 'Cover 3'
+              : 'Blitz';
+  showHelper(label + ' variant saved');
+}
+
+function cancelAuthoring() {
+  if (!authoringCoverage) return;
+  authoringCoverage = null;
+  authorBanner.classList.remove('show');
+  // Revert to base play
+  if (basePlaySnapshot) {
+    applyPlayPayload(basePlaySnapshot);
+    cover2Variant = basePlaySnapshot.cover2Variant || null;
+    cover3Variant = basePlaySnapshot.cover3Variant || null;
+    blitzVariant  = basePlaySnapshot.blitzVariant  || null;
+  }
+  currentCoverage = 'base';
+  render(); renderRoutes();
+  updateCoverageButton();
+  showHelper("Authoring cancelled");
+}
+
+document.getElementById('authorC2Btn').addEventListener('click', () => {
+  closeMenu();
+  startAuthoring('cover2');
+});
+document.getElementById('authorC3Btn').addEventListener('click', () => {
+  closeMenu();
+  startAuthoring('cover3');
+});
+document.getElementById('authorBlitzBtn').addEventListener('click', () => {
+  closeMenu();
+  startAuthoring('blitz');
+});
+document.getElementById('saveVariantBtn').addEventListener('click', () => {
+  closeMenu();
+  saveAuthoring();
+});
+document.getElementById('cancelAuthorBtn').addEventListener('click', () => {
+  closeMenu();
+  cancelAuthoring();
+});
+document.getElementById('authorCancel').addEventListener('click', cancelAuthoring);
 document.getElementById('installDemoBtn').addEventListener('click', async () => {
   closeMenu();
   try {
@@ -4706,13 +5134,6 @@ showHelper("Drag players • Drag the C to move LOS", 2800);
 // Ensure camera is applied after first paint (viewport measurements may be 0 initially)
 requestAnimationFrame(() => applyCamera());
 setTimeout(applyCamera, 100);
-
-// ── Register service worker (offline support + installable app) ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode just won't be available */ });
-  });
-}
 </script>
 </body>
 </html>
