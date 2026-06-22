@@ -93,6 +93,11 @@
     overflow: hidden;
   }
   .flip-menu-panel.open { display: block; }
+  .flip-menu-panel-right { left: auto; right: 0; }
+  .submenu { display: none; background: rgba(0,0,0,0.25); }
+  .submenu.open { display: block; }
+  .submenu-item { padding-left: 28px !important; font-size: 12px; }
+  .submenu-toggle { font-weight: 700; }
   .flip-menu-item {
     display: block;
     width: 100%;
@@ -459,6 +464,19 @@
   .saved-list li .when {
     color: var(--text-dim);
     font-size: 10px;
+  }
+  .saved-list li.section-divider {
+    background: transparent;
+    border: none;
+    padding: 12px 4px 4px;
+    margin-bottom: 0;
+  }
+  .saved-list li.section-divider .section-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
   }
   .saved-list .empty {
     color: var(--text-dim);
@@ -998,6 +1016,37 @@
   #coverageBtn.active-c2 { background: #ffd84d; color: #000; border-color: #ffd84d; }
   #coverageBtn.active-c3 { background: #7ed957; color: #000; border-color: #7ed957; }
   #coverageBtn.active-blitz { background: #ff5e5e; color: #000; border-color: #ff5e5e; }
+  /* Player picker (Menu → Select Player) */
+  .pick-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 12px 0 8px;
+  }
+  .pick-section-title:first-child { margin-top: 0; }
+  .pick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .player-pick {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    border: 2px solid #000;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .player-pick:active { transform: scale(0.92); }
+  .player-pick.defense { border-radius: 6px; }
 
   @media (max-width: 700px) {
     .topbar { padding: 0 8px; gap: 6px; }
@@ -1017,30 +1066,9 @@
     <div class="menu-wrap">
       <button class="top-btn" id="menuBtn">≡ MENU</button>
       <div class="menu-panel" id="menuPanel">
-        <button class="menu-item" id="savePlayBtn">💾 Save Play</button>
-        <button class="menu-item" id="loadPlayBtn">📂 Load Play</button>
+        <button class="menu-item" id="selectPlayerBtn">👤 Select Player</button>
+        <div class="menu-divider"></div>
         <button class="menu-item" id="installDemoBtn">⬇ Install Demo Play</button>
-        <div class="menu-divider"></div>
-        <button class="menu-item" id="authorC2Btn">📐 Author Cover 2 Variant</button>
-        <button class="menu-item" id="authorC3Btn">📐 Author Cover 3 Variant</button>
-        <button class="menu-item" id="authorBlitzBtn">📐 Author Blitz Variant</button>
-        <button class="menu-item" id="saveVariantBtn">💾 Save Coverage Variant</button>
-        <button class="menu-item" id="cancelAuthorBtn">✕ Cancel Authoring</button>
-        <div class="menu-divider"></div>
-        <button class="menu-item" id="pickFormBtn">📋 Pick Formation</button>
-        <button class="menu-item" id="saveFormBtn">💾 Save Formation</button>
-        <div class="menu-divider"></div>
-        <button class="menu-item add-off" id="addOff"><span class="dot"></span>Add Offensive Player</button>
-        <button class="menu-item add-def" id="addDef"><span class="dot"></span>Add Defensive Player</button>
-        <div class="menu-divider"></div>
-        <button class="menu-item add-def" id="addDefenseBtn"><span class="dot"></span>Add Defense (Cover 3)</button>
-        <button class="menu-item add-def" id="loadDefenseBtn"><span class="dot"></span>Load Defense</button>
-        <button class="menu-item add-def" id="saveDefenseBtn"><span class="dot"></span>Save Current Defense</button>
-        <div class="menu-divider"></div>
-        <button class="menu-item" id="capBoxesBtn"><span class="dot" style="background:#e64545"></span>Toggle Cap Boxes</button>
-        <div class="menu-divider"></div>
-        <button class="menu-item" id="defaultBtn">Reset Offense</button>
-        <button class="menu-item" id="resetBtn">Clear Field</button>
       </div>
     </div>
     <button class="top-btn" id="playsBtn">📂 PLAYS</button>
@@ -1052,6 +1080,8 @@
         <button class="flip-menu-item" id="coverC3Btn">▲▲▲ Cover 3</button>
         <button class="flip-menu-item" id="coverBlitzBtn">⚡ Blitz</button>
         <button class="flip-menu-item" id="trianglesBtn">◆ Toggle Triangles</button>
+        <div class="menu-divider"></div>
+        <button class="flip-menu-item" id="tagPlayBtn">🏷️ Tag Play</button>
       </div>
     </div>
     <div class="flip-menu-wrap">
@@ -1065,7 +1095,22 @@
         <button class="flip-menu-item" id="flipFormBtn">↔ Formation</button>
       </div>
     </div>
-    <select class="top-select" id="playerSelect">
+    <div class="flip-menu-wrap">
+      <button class="top-btn" id="creatorBtn">✎ PLAY CREATOR ▾</button>
+      <div class="flip-menu-panel" id="creatorMenu">
+        <button class="flip-menu-item" id="creatorSavePlay">💾 Save Play</button>
+        <button class="flip-menu-item" id="creatorLoadPlay">📂 Load Play</button>
+        <button class="flip-menu-item" id="creatorPickForm">📋 Pick Formation</button>
+        <button class="flip-menu-item" id="creatorSaveForm">💾 Save Formation</button>
+        <button class="flip-menu-item" id="addDefenseBtn">🛡 Add Defense</button>
+        <button class="flip-menu-item" id="saveDefenseBtn">💾 Save Defense</button>
+        <button class="flip-menu-item" id="capBoxesBtn">▦ Cap Boxes</button>
+        <button class="flip-menu-item" id="addPlayerBtn">➕ Add Player</button>
+        <button class="flip-menu-item" id="defaultBtn">↺ Reset Offense</button>
+        <button class="flip-menu-item" id="resetBtn">✕ Clear Field</button>
+      </div>
+    </div>
+    <select class="top-select" id="playerSelect" style="display:none">
       <option value="">Select player…</option>
     </select>
     <div class="topbar-spacer"></div>
@@ -1081,10 +1126,6 @@
       <div class="draw-mode-banner" id="drawBanner">
         <span id="drawBannerText">Drag from the player to draw a route</span>
         <span class="cancel-x" id="drawCancel">✕</span>
-      </div>
-      <div class="author-banner" id="authorBanner">
-        <span id="authorBannerText">Authoring Cover 2 variant. Save when ready.</span>
-        <span class="cancel-x" id="authorCancel">✕</span>
       </div>
 
       <div class="field-viewport" id="fieldViewport">
@@ -1242,7 +1283,6 @@ let cover2Variant = null;             // saved variant payload for Cover 2 (or n
 let cover3Variant = null;             // saved variant payload for Cover 3 (or null)
 let blitzVariant = null;              // saved variant payload for Blitz (or null)
 let currentCoverage = 'base';         // 'base' | 'cover2' | 'cover3' | 'blitz'
-let authoringCoverage = null;         // null | 'cover2' | 'cover3' | 'blitz' when authoring
 let trianglesOn = false;              // show outside-WR triangles overlay
 let capBoxFills = {};         // key "row,col" → color hex (or undefined for none)
 
@@ -3117,7 +3157,7 @@ document.addEventListener('touchstart', (e) => {
   closeMenu();
 }, { passive: true });
 
-document.getElementById('addOff').addEventListener('click', () => {
+document.getElementById('addOff')?.addEventListener('click', () => {
   closeMenu();
   addPlayer('offense', losXSvg() - 0.5, 26.5 + (Math.random() - 0.5) * 8, '?', '#ff6b35');
   selectedId = players[players.length - 1].id;
@@ -3125,7 +3165,7 @@ document.getElementById('addOff').addEventListener('click', () => {
   render();
   showHelper("Offensive player added");
 });
-document.getElementById('addDef').addEventListener('click', () => {
+document.getElementById('addDef')?.addEventListener('click', () => {
   closeMenu();
   addPlayer('defense', losXSvg() + 1.5, 26.5 + (Math.random() - 0.5) * 8, '?', '#4a90e2');
   selectedId = players[players.length - 1].id;
@@ -3133,7 +3173,7 @@ document.getElementById('addDef').addEventListener('click', () => {
   render();
   showHelper("Defensive player added");
 });
-document.getElementById('addDefenseBtn').addEventListener('click', () => {
+document.getElementById('addDefenseBtn')?.addEventListener('click', () => {
   closeMenu();
   loadDefaultDefense();
   selectedId = null;
@@ -3142,7 +3182,7 @@ document.getElementById('addDefenseBtn').addEventListener('click', () => {
   showHelper("Cover 3 defense added");
 });
 document.getElementById('capBoxesBtn').addEventListener('click', () => {
-  closeMenu();
+  creatorMenu.classList.remove('open');
   capBoxesOn = !capBoxesOn;
   updateCapBoxes();
   showHelper(capBoxesOn ? "Cap boxes ON" : "Cap boxes OFF");
@@ -3154,13 +3194,13 @@ document.getElementById('trianglesBtn').addEventListener('click', () => {
   showHelper(trianglesOn ? "Triangles ON" : "Triangles OFF");
 });
 document.getElementById('resetBtn').addEventListener('click', () => {
-  closeMenu();
+  creatorMenu.classList.remove('open');
   players = []; routes = []; selectedId = null; selectedRouteId = null;
   currentPlayName = null;
   render(); renderRoutes(); updatePlayNameLabel(); showHelper("Field cleared");
 });
 document.getElementById('defaultBtn').addEventListener('click', () => {
-  closeMenu();
+  creatorMenu.classList.remove('open');
   selectedId = null;
   currentPlayName = null;
   loadDefault();
@@ -3979,12 +4019,12 @@ document.getElementById('rdFinishBtn').addEventListener('click', (e) => {
   endRouteBuilder(true);
 });
 
-// Formation library buttons
-document.getElementById('pickFormBtn').addEventListener('click', () => {
+// Formation library buttons (legacy menu items; may not exist)
+document.getElementById('pickFormBtn')?.addEventListener('click', () => {
   closeMenu();
   openFormationPicker();
 });
-document.getElementById('saveFormBtn').addEventListener('click', () => {
+document.getElementById('saveFormBtn')?.addEventListener('click', () => {
   closeMenu();
   saveCurrentAsFormation();
 });
@@ -4206,7 +4246,7 @@ function getDefensePayload() {
 }
 
 // ---- Apply payloads ----
-function applyPlayPayload(p) {
+function applyPlayPayload(p, opts) {
   // Replace offense AND defense (and their routes) with loaded data.
   players = players.filter(pl => pl.side !== 'offense' && pl.side !== 'defense');
   // Drop any routes whose owner no longer exists.
@@ -4271,9 +4311,12 @@ function applyPlayPayload(p) {
   cover3Variant = p.cover3Variant || null;
   blitzVariant  = p.blitzVariant  || null;
   currentCoverage = 'base';
-  // Take a fresh snapshot of the base play AFTER everything is applied,
-  // so future coverage swaps can revert cleanly.
-  basePlaySnapshot = getPlayPayload();
+  // Only re-snapshot the base play when loading a fresh play from storage
+  // (not when applying a coverage variant). The caller passes opts.isBaseLoad
+  // to indicate the new base.
+  if (opts && opts.isBaseLoad) {
+    basePlaySnapshot = getPlayPayload();
+  }
   updateCoverageButton && updateCoverageButton();
 }
 function applyDefensePayload(d) {
@@ -4440,7 +4483,9 @@ async function showLoadDialog(kind, applyFn, titleOverride) {
       if (!raw) { showHelper("Could not load"); return; }
       try {
         const payload = JSON.parse(raw);
-        applyFn(payload);
+        // Plays: mark as a base load so applyPlayPayload re-snapshots.
+        if (isPlay) applyFn(payload, { isBaseLoad: true });
+        else applyFn(payload);
         render();
         renderRoutes();
         updateLos();
@@ -4470,24 +4515,236 @@ async function showLoadDialog(kind, applyFn, titleOverride) {
   });
 }
 
-document.getElementById('savePlayBtn').addEventListener('click', () => {
+document.getElementById('savePlayBtn')?.addEventListener('click', () => {
   closeMenu();
   showSaveDialog('plays', getPlayPayload);
 });
-document.getElementById('loadPlayBtn').addEventListener('click', () => {
+document.getElementById('loadPlayBtn')?.addEventListener('click', () => {
   closeMenu();
   showLoadDialog('plays', applyPlayPayload);
 });
+document.getElementById('selectPlayerBtn').addEventListener('click', () => {
+  closeMenu();
+  showSelectPlayerDialog();
+});
+
+// Pop a modal listing all current players (offense + defense). Tap one to
+// select it; behaves identically to choosing it from the old dropdown.
+function showSelectPlayerDialog() {
+  const off = players.filter(p => p.side === 'offense');
+  const def = players.filter(p => p.side === 'defense');
+  if (off.length + def.length === 0) {
+    showHelper("No players on the field");
+    return;
+  }
+  function btn(p) {
+    const lblColor = colorLum(p.color) > 0.6 ? '#000' : '#fff';
+    return `<button class="player-pick" data-pick-id="${p.id}" style="background:${p.color};color:${lblColor};">
+      ${escapeHtml(p.label || '?')}
+    </button>`;
+  }
+  let html = '';
+  if (off.length) {
+    html += '<div class="pick-section-title">Offense</div>';
+    html += '<div class="pick-row">' + off.map(btn).join('') + '</div>';
+  }
+  if (def.length) {
+    html += '<div class="pick-section-title">Defense</div>';
+    html += '<div class="pick-row">' + def.map(btn).join('') + '</div>';
+  }
+  openModal('Select Player', html, { hideConfirm: true });
+  modalBody.querySelectorAll('.player-pick').forEach(b => {
+    b.addEventListener('click', () => {
+      const id = parseInt(b.dataset.pickId, 10);
+      selectedId = id;
+      const p = players.find(pl => pl.id === id);
+      if (p) currentSide = p.side;
+      closeModal();
+      render();
+      updatePlayerSelect && updatePlayerSelect();
+      updateInspector && updateInspector();
+    });
+  });
+}
 document.getElementById('playsBtn').addEventListener('click', () => {
   showLoadDialog('plays', applyPlayPayload, 'Plays');
+});
+
+// ---- Play Creator dropdown ----
+const creatorMenu = document.getElementById('creatorMenu');
+document.getElementById('creatorBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  creatorMenu.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!creatorMenu.classList.contains('open')) return;
+  const inside = creatorMenu.contains(e.target) ||
+                 document.getElementById('creatorBtn').contains(e.target);
+  if (!inside) {
+    creatorMenu.classList.remove('open');
+  }
+});
+document.getElementById('creatorSavePlay').addEventListener('click', () => {
+  creatorMenu.classList.remove('open');
+  showSaveDialog('plays', getPlayPayload);
+});
+document.getElementById('creatorLoadPlay').addEventListener('click', () => {
+  creatorMenu.classList.remove('open');
+  showLoadDialog('plays', applyPlayPayload);
+});
+document.getElementById('creatorPickForm').addEventListener('click', () => {
+  creatorMenu.classList.remove('open');
+  openFormationPicker();
+});
+document.getElementById('creatorSaveForm').addEventListener('click', () => {
+  creatorMenu.classList.remove('open');
+  saveCurrentAsFormation();
+});
+
+// Add Defense — single button opens a modal with the 3 coverages.
+function dropDefenseOnly(which) {
+  if (which === 'cover2')      loadCover2Defense();
+  else if (which === 'cover3') loadDefaultDefense();
+  else if (which === 'blitz')  loadBlitzDefense();
+  // Auto-enable triangle overlay so the coverage shape is visible immediately.
+  trianglesOn = true;
+  render(); renderRoutes();
+  const label = which === 'cover2' ? "Cover 2 added"
+              : which === 'cover3' ? "Cover 3 added"
+              : "Blitz added";
+  showHelper(label);
+}
+
+async function showAddDefenseDialog() {
+  // Build preset rows
+  const presets = [
+    { which: 'cover2', label: '▲▲ Cover 2',  desc: '2 deep S + 3 LB' },
+    { which: 'cover3', label: '▲▲▲ Cover 3', desc: '2 CB + 2 LB + 1 S' },
+    { which: 'blitz',  label: '⚡ Blitz',    desc: '2 CB + 1 LB + 1 S' },
+  ];
+  const presetRows = presets.map(c => `
+    <li>
+      <div class="name" data-preset="${c.which}">
+        ${c.label}
+        <div class="when">${c.desc}</div>
+      </div>
+    </li>`).join('');
+  // Pull saved defenses from storage
+  let savedRows = '';
+  try {
+    const idx = await getIndex('defenses');
+    if (idx.length > 0) {
+      savedRows = '<li class="section-divider"><div class="section-label">Saved Defenses</div></li>' +
+        idx.map(item => `
+          <li>
+            <div class="name" data-defense-id="${item.id}">
+              ${escapeHtml(item.name)}
+              <div class="when">${new Date(item.savedAt).toLocaleString()}</div>
+            </div>
+            <button class="del" data-del-defense-id="${item.id}" title="Delete">✕</button>
+          </li>`).join('');
+    }
+  } catch(_) {}
+  const body = `<ul class="saved-list">${presetRows}${savedRows}</ul>`;
+  openModal('Add Defense', body, { hideConfirm: true });
+  // Preset taps
+  modalBody.querySelectorAll('.name[data-preset]').forEach(el => {
+    el.addEventListener('click', () => {
+      const which = el.dataset.preset;
+      closeModal();
+      dropDefenseOnly(which);
+    });
+  });
+  // Saved-defense taps
+  modalBody.querySelectorAll('.name[data-defense-id]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.defenseId;
+      const raw = await storageGet('defenses:' + id);
+      if (!raw) { showHelper("Could not load"); return; }
+      try {
+        const payload = JSON.parse(raw);
+        applyDefensePayload(payload);
+        // Auto-enable triangles so the saved defense's shape reads visually
+        trianglesOn = true;
+        render(); renderRoutes();
+        closeModal();
+        showHelper("Defense loaded");
+      } catch (err) {
+        showHelper("Bad defense data");
+      }
+    });
+  });
+  // Delete handlers
+  modalBody.querySelectorAll('.del[data-del-defense-id]').forEach(b => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = b.dataset.delDefenseId;
+      const idx = await getIndex('defenses');
+      const filtered = idx.filter(i => i.id !== id);
+      await setIndex('defenses', filtered);
+      await storageDelete('defenses:' + id);
+      closeModal();
+      showAddDefenseDialog();
+    });
+  });
+}
+
+document.getElementById('addDefenseBtn').addEventListener('click', async () => {
+  creatorMenu.classList.remove('open');
+  await showAddDefenseDialog();
+});
+
+// Add Player — one dialog with both offense and defense positions
+const OFFENSE_POSITIONS = [
+  { label: 'RB', color: '#ff8a4c' }, // orange
+  { label: 'TE', color: '#a78bfa' }, // purple
+];
+const DEFENSE_POSITIONS = [
+  { label: 'S',  color: '#4a90e2' },
+  { label: 'FS', color: '#4a90e2' },
+  { label: 'LB', color: '#4a90e2' },
+];
+
+function showAddPlayerDialog() {
+  function btn(pos, side) {
+    const lblColor = colorLum(pos.color) > 0.6 ? '#000' : '#fff';
+    const shape = side === 'defense' ? 'defense' : '';
+    return `<button class="player-pick ${shape}" data-label="${escapeHtmlAttr(pos.label)}" data-color="${pos.color}" data-side="${side}" style="background:${pos.color};color:${lblColor};">
+      ${escapeHtml(pos.label)}
+    </button>`;
+  }
+  let html = '';
+  html += '<div class="pick-section-title">Offense</div>';
+  html += '<div class="pick-row">' + OFFENSE_POSITIONS.map(p => btn(p, 'offense')).join('') + '</div>';
+  html += '<div class="pick-section-title">Defense</div>';
+  html += '<div class="pick-row">' + DEFENSE_POSITIONS.map(p => btn(p, 'defense')).join('') + '</div>';
+  openModal('Add Player', html, { hideConfirm: true });
+  modalBody.querySelectorAll('.player-pick').forEach(b => {
+    b.addEventListener('click', () => {
+      const label = b.dataset.label;
+      const color = b.dataset.color;
+      const side  = b.dataset.side;
+      const x = side === 'offense' ? losXSvg() - 0.5 : losXSvg() + 1.5;
+      const y = 26.5 + (Math.random() - 0.5) * 8;
+      addPlayer(side, x, y, label, color);
+      selectedId = players[players.length - 1].id;
+      // Don't auto-open the inspector — user can tap Select Player later.
+      closeModal();
+      render();
+      showHelper((side === 'offense' ? 'Offense' : 'Defense') + ' ' + label + ' added');
+    });
+  });
+}
+
+document.getElementById('addPlayerBtn').addEventListener('click', () => {
+  creatorMenu.classList.remove('open');
+  showAddPlayerDialog();
 });
 
 //=========================================================================
 // COVERAGE VARIANTS — top-bar dropdown, authoring flow
 //=========================================================================
 const coverageMenu = document.getElementById('coverageMenu');
-const authorBanner = document.getElementById('authorBanner');
-const authorBannerText = document.getElementById('authorBannerText');
 
 // Toggle coverage dropdown
 document.getElementById('coverageBtn').addEventListener('click', (e) => {
@@ -4513,10 +4770,6 @@ function updateCoverageButton() {
 
 // Apply a coverage view (game-day workflow)
 function applyCoverage(which) {
-  if (authoringCoverage) {
-    showHelper("Save or cancel the variant first");
-    return;
-  }
   if (!basePlaySnapshot) {
     showHelper("Load a play first");
     return;
@@ -4598,96 +4851,124 @@ function loadCover2Defense() {
   addPlayer('defense', losX + 5  * YARD, 26.5 + 10 * YARD + 3 * YARD, 'LB', '#4a90e2');
 }
 
-//---- Authoring flow ----
-function startAuthoring(which) {
+//---- Tag-coverage flow ----
+// Saves the current state (defense + routes + cap boxes) as a coverage
+// variant on the loaded play, then persists the play in storage so the
+// tag survives across sessions. Prompts before overwriting an existing tag.
+async function tagCurrentCoverage() {
   if (!basePlaySnapshot) {
     showHelper("Load a play first");
     return;
   }
-  authoringCoverage = which;
-  // Apply base play, then add the default defense for this coverage.
-  applyPlayPayload(basePlaySnapshot);
-  cover2Variant = basePlaySnapshot.cover2Variant || null;
-  cover3Variant = basePlaySnapshot.cover3Variant || null;
-  blitzVariant  = basePlaySnapshot.blitzVariant  || null;
-  if (which === 'cover2')      loadCover2Defense();
-  else if (which === 'cover3') loadDefaultDefense();
-  else if (which === 'blitz')  loadBlitzDefense();
-  render(); renderRoutes();
+  if (currentCoverage === 'base') {
+    showHelper("Pick a coverage first (Cover 2 / 3 / Blitz)");
+    return;
+  }
+  const which = currentCoverage;
   const label = which === 'cover2' ? 'Cover 2'
               : which === 'cover3' ? 'Cover 3'
               : 'Blitz';
-  authorBannerText.textContent =
-    'Authoring ' + label + ' variant. Tweak routes/defense, then Save.';
-  authorBanner.classList.add('show');
-}
-
-function saveAuthoring() {
-  if (!authoringCoverage) {
-    showHelper("Not authoring — choose Author Cover 2 / 3 / Blitz first");
-    return;
+  // Check if a tag already exists for this coverage on this play
+  const existing = (which === 'cover2') ? cover2Variant
+                 : (which === 'cover3') ? cover3Variant
+                 : blitzVariant;
+  if (existing) {
+    const ok = await confirmDialog(
+      'Replace existing ' + label + ' tag?',
+      'This play already has a tagged ' + label + ' adjustment. Replace it with the current view?',
+      'Replace');
+    if (!ok) return;
   }
+  // Build the variant snapshot
   const snapshot = getPlayPayload();
-  // Don't recurse: strip variant references from the snapshot before storing.
+  // Don't recurse: strip nested variant references
   snapshot.cover2Variant = null;
   snapshot.cover3Variant = null;
   snapshot.blitzVariant  = null;
-  if (authoringCoverage === 'cover2')      cover2Variant = snapshot;
-  else if (authoringCoverage === 'cover3') cover3Variant = snapshot;
-  else if (authoringCoverage === 'blitz')  blitzVariant  = snapshot;
-  // Also persist into the base snapshot so future Save Play captures them.
-  if (basePlaySnapshot) {
-    basePlaySnapshot.cover2Variant = cover2Variant;
-    basePlaySnapshot.cover3Variant = cover3Variant;
-    basePlaySnapshot.blitzVariant  = blitzVariant;
-  }
-  const which = authoringCoverage;
-  authoringCoverage = null;
-  authorBanner.classList.remove('show');
-  const label = which === 'cover2' ? 'Cover 2'
-              : which === 'cover3' ? 'Cover 3'
-              : 'Blitz';
-  showHelper(label + ' variant saved');
+  if (which === 'cover2')      cover2Variant = snapshot;
+  else if (which === 'cover3') cover3Variant = snapshot;
+  else if (which === 'blitz')  blitzVariant  = snapshot;
+  // Persist on the base snapshot so future loads and saves include this tag
+  basePlaySnapshot.cover2Variant = cover2Variant;
+  basePlaySnapshot.cover3Variant = cover3Variant;
+  basePlaySnapshot.blitzVariant  = blitzVariant;
+  // Auto-save the play in the background (overwrite if the play is named)
+  await autoSaveCurrentPlayWithVariants();
+  showHelper(label + " tagged to play");
 }
 
-function cancelAuthoring() {
-  if (!authoringCoverage) return;
-  authoringCoverage = null;
-  authorBanner.classList.remove('show');
-  // Revert to base play
-  if (basePlaySnapshot) {
-    applyPlayPayload(basePlaySnapshot);
-    cover2Variant = basePlaySnapshot.cover2Variant || null;
-    cover3Variant = basePlaySnapshot.cover3Variant || null;
-    blitzVariant  = basePlaySnapshot.blitzVariant  || null;
+// Saves the loaded play (with variants) back to storage under the same name.
+// Used by the tag flow so the user doesn't need a separate Save Play step.
+async function autoSaveCurrentPlayWithVariants() {
+  if (!currentPlayName) {
+    // Play wasn't loaded from saved storage. Just keep the variant in memory.
+    return;
   }
-  currentCoverage = 'base';
-  render(); renderRoutes();
-  updateCoverageButton();
-  showHelper("Authoring cancelled");
+  try {
+    const idx = await getIndex('plays');
+    const existing = idx.find(it => it.name.toLowerCase() === currentPlayName.toLowerCase());
+    // Build a payload reflecting the BASE play (not the current coverage view)
+    // plus the freshly attached variants.
+    const payload = JSON.parse(JSON.stringify(basePlaySnapshot));
+    payload.cover2Variant = cover2Variant;
+    payload.cover3Variant = cover3Variant;
+    payload.blitzVariant  = blitzVariant;
+    if (existing) {
+      await storageSet('plays:' + existing.id, JSON.stringify(payload));
+      existing.savedAt = Date.now();
+      await setIndex('plays', idx);
+    } else {
+      // Play name set but not in index — create a fresh entry
+      const id = newId();
+      await storageSet('plays:' + id, JSON.stringify(payload));
+      idx.unshift({ id, name: currentPlayName, savedAt: Date.now() });
+      await setIndex('plays', idx);
+    }
+  } catch (e) {
+    console.error('autoSave failed:', e);
+  }
 }
 
-document.getElementById('authorC2Btn').addEventListener('click', () => {
-  closeMenu();
-  startAuthoring('cover2');
+// Confirm dialog using the existing modal infrastructure. Returns a promise
+// that resolves true (confirm) or false (cancel).
+function confirmDialog(title, message, confirmText) {
+  return new Promise((resolve) => {
+    let resolved = false;
+    const settle = (v) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(v);
+    };
+    // Watch for modal close (cancel button, backdrop click, ESC).
+    const onClose = () => {
+      modalBackdrop.removeEventListener('transitionend', onClose);
+      setTimeout(() => {
+        if (!modalBackdrop.classList.contains('open')) settle(false);
+      }, 0);
+    };
+    const origClose = closeModal;
+    openModal(title,
+      `<p style="margin:0;color:var(--text-dim);font-size:13px;line-height:1.4;">${escapeHtml(message)}</p>`,
+      {
+        confirmText: confirmText || 'OK',
+        onConfirm: () => { closeModal(); settle(true); },
+      });
+    // Poll briefly for backdrop close to detect cancel/backdrop clicks
+    const poll = setInterval(() => {
+      if (!modalBackdrop.classList.contains('open')) {
+        clearInterval(poll);
+        settle(false);
+      }
+    }, 100);
+  });
+}
+
+// Tag Play: save the current state as a coverage variant of the loaded play.
+document.getElementById('tagPlayBtn').addEventListener('click', async () => {
+  coverageMenu.classList.remove('open');
+  await tagCurrentCoverage();
 });
-document.getElementById('authorC3Btn').addEventListener('click', () => {
-  closeMenu();
-  startAuthoring('cover3');
-});
-document.getElementById('authorBlitzBtn').addEventListener('click', () => {
-  closeMenu();
-  startAuthoring('blitz');
-});
-document.getElementById('saveVariantBtn').addEventListener('click', () => {
-  closeMenu();
-  saveAuthoring();
-});
-document.getElementById('cancelAuthorBtn').addEventListener('click', () => {
-  closeMenu();
-  cancelAuthoring();
-});
-document.getElementById('authorCancel').addEventListener('click', cancelAuthoring);
+
 document.getElementById('installDemoBtn').addEventListener('click', async () => {
   closeMenu();
   try {
@@ -4728,7 +5009,7 @@ document.getElementById('installDemoBtn').addEventListener('click', async () => 
   }
 });
 document.getElementById('saveDefenseBtn').addEventListener('click', () => {
-  closeMenu();
+  creatorMenu.classList.remove('open');
   // Require there to be at least one defender
   if (!players.some(p => p.side === 'defense')) {
     showHelper("Add a defense first");
@@ -4736,7 +5017,7 @@ document.getElementById('saveDefenseBtn').addEventListener('click', () => {
   }
   showSaveDialog('defenses', getDefensePayload);
 });
-document.getElementById('loadDefenseBtn').addEventListener('click', () => {
+document.getElementById('loadDefenseBtn')?.addEventListener('click', () => {
   closeMenu();
   showLoadDialog('defenses', applyDefensePayload);
 });
