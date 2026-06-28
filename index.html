@@ -1133,6 +1133,7 @@
         <button class="flip-menu-item" id="coverC2Btn">▲▲ Cover 2</button>
         <button class="flip-menu-item" id="coverC3Btn">▲▲▲ Cover 3</button>
         <button class="flip-menu-item" id="coverBlitzBtn">⚡ Blitz</button>
+        <button class="flip-menu-item" id="hideDefBtn">🧼 Clean Look</button>
         <button class="flip-menu-item" id="trianglesBtn">◆ Toggle Triangles</button>
         <div class="menu-divider"></div>
         <button class="flip-menu-item" id="tagPlayBtn">🏷️ Tag Play</button>
@@ -1157,6 +1158,7 @@
         <button class="flip-menu-item" id="creatorPickForm">📋 Pick Formation</button>
         <button class="flip-menu-item" id="creatorSaveForm">💾 Save Formation</button>
         <button class="flip-menu-item" id="addDefenseBtn">🛡 Add Defense</button>
+        <button class="flip-menu-item" id="removeDefenseBtn">🚫 Remove Defense</button>
         <button class="flip-menu-item" id="saveDefenseBtn">💾 Save Defense</button>
         <button class="flip-menu-item" id="capBoxesBtn">▦ Cap Boxes</button>
         <button class="flip-menu-item" id="addPlayerBtn">➕ Add Player</button>
@@ -3291,6 +3293,25 @@ document.getElementById('capBoxesBtn').addEventListener('click', () => {
   updateCapBoxes();
   showHelper(capBoxesOn ? "Cap boxes ON" : "Cap boxes OFF");
 });
+// Remove all defenders + their routes so a play can be drawn against a defense
+// for reference, then saved clean (offense only). Also clears the triangle
+// overlay and resets coverage to Base, since both depend on the defense.
+document.getElementById('removeDefenseBtn').addEventListener('click', () => {
+  creatorMenu.classList.remove('open');
+  const defIds = new Set(players.filter(p => p.side === 'defense').map(p => p.id));
+  if (defIds.size === 0) { showHelper("No defense on the field"); return; }
+  players = players.filter(p => p.side !== 'defense');
+  routes = routes.filter(r => !defIds.has(r.ownerId));
+  if (selectedId !== null && defIds.has(selectedId)) selectedId = null;
+  trianglesOn = false;
+  currentCoverage = 'base';
+  render();
+  renderRoutes();
+  renderOutsideWRTriangles();
+  updateCapBoxes();   // keep the cap boxes (toggle + colors) — defense removal must not drop them
+  updateCoverageButton && updateCoverageButton();
+  showHelper("Defense removed");
+});
 document.getElementById('trianglesBtn').addEventListener('click', () => {
   coverageMenu.classList.remove('open');
   trianglesOn = !trianglesOn;
@@ -3301,7 +3322,10 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   creatorMenu.classList.remove('open');
   players = []; routes = []; selectedId = null; selectedRouteId = null;
   currentPlayName = null;
-  render(); renderRoutes(); updatePlayNameLabel(); showHelper("Field cleared");
+  capBoxFills = {};        // also clear any cap-box colors that were filled
+  trianglesOn = false;
+  render(); renderRoutes(); renderOutsideWRTriangles(); updateCapBoxes();
+  updatePlayNameLabel(); showHelper("Field cleared");
 });
 document.getElementById('defaultBtn').addEventListener('click', () => {
   creatorMenu.classList.remove('open');
@@ -4233,7 +4257,7 @@ function nudgeSelected(dx, dy) {
 
 document.querySelectorAll('#dpad button[data-dir]').forEach(btn => {
   const dir = btn.dataset.dir;
-  const step = YARD;
+  const step = YARD * 0.5;  // half-yard per tap (and per hold-repeat tick)
 
   // Map screen direction → svg direction.
   // Field is rotated -90deg: svg +x → screen UP, svg +y → screen RIGHT.
@@ -4975,6 +4999,23 @@ document.getElementById('coverC3Btn').addEventListener('click', () => {
 document.getElementById('coverBlitzBtn').addEventListener('click', () => {
   coverageMenu.classList.remove('open');
   applyCoverage('blitz');
+});
+// Clean Look — drop the defenders + triangles off the screen but KEEP the
+// offense routes exactly as drawn for this coverage. Leaves currentCoverage and
+// the tagged variants untouched, so re-tapping the coverage restores the defense.
+document.getElementById('hideDefBtn').addEventListener('click', () => {
+  coverageMenu.classList.remove('open');
+  const defIds = new Set(players.filter(p => p.side === 'defense').map(p => p.id));
+  if (defIds.size === 0) { showHelper("No defense to hide"); return; }
+  players = players.filter(p => p.side !== 'defense');
+  routes = routes.filter(r => !defIds.has(r.ownerId));
+  if (selectedId !== null && defIds.has(selectedId)) selectedId = null;
+  trianglesOn = false;
+  render();
+  renderRoutes();
+  renderOutsideWRTriangles();
+  updateCapBoxes();
+  showHelper("Clean look — defense hidden, routes kept");
 });
 
 // Cover 2 default defense (mirrors triangle-system)
