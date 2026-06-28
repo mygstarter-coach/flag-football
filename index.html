@@ -76,6 +76,58 @@
     display: flex; align-items: center; justify-content: center; gap: 6px;
   }
   .top-btn:active { background: var(--accent); color: #000; }
+  .top-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  /* ===== Game Tracker sub-ribbon ===== */
+  .tracker-ribbon {
+    display: flex; align-items: center; gap: 8px;
+    height: 48px; padding: 0 12px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    position: relative; z-index: 99;
+  }
+  .gt-menu-wrap { position: relative; flex: 0 0 auto; }
+  .gt-menu-panel {
+    position: absolute; top: calc(100% + 4px); left: 0;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: none; min-width: 180px;
+    z-index: 200; overflow: hidden;
+  }
+  .gt-menu-panel.open { display: block; }
+  .gt-btn {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    height: 34px; padding: 0 12px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-weight: 800; font-size: 12px; letter-spacing: 0.04em;
+    text-transform: uppercase; white-space: nowrap; flex: 0 0 auto;
+    display: flex; align-items: center; gap: 6px; -webkit-tap-highlight-color: transparent;
+  }
+  .gt-btn:active { background: var(--panel-2); }
+  .gt-record { background: var(--accent); color: #000; border-color: var(--accent); }
+  .gt-record:active { filter: brightness(0.9); background: var(--accent); }
+  .gt-chips {
+    display: flex; align-items: center; gap: 6px;
+    overflow-x: auto; flex: 1 1 auto; height: 100%;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .gt-chips::-webkit-scrollbar { display: none; }
+  .gt-chip {
+    flex: 0 0 auto; height: 30px; padding: 0 10px; border-radius: 15px;
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    display: flex; align-items: center; gap: 5px; -webkit-tap-highlight-color: transparent;
+  }
+  .gt-chip .n { color: var(--text-dim); font-weight: 800; }
+  .gt-chip .reads { color: #00e5ff; font-weight: 800; font-size: 10px; }
+  .gt-chip.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .gt-empty { color: var(--text-dim); font-size: 11px; font-style: italic; white-space: nowrap; }
+  /* numbered cap-box preread labels */
+  .capbox-num {
+    fill: rgba(244,241,234,0.55);
+    font-family: 'Impact','Arial Black',sans-serif;
+    font-size: 2.4px; letter-spacing: 0.04em;
+    text-anchor: middle; dominant-baseline: middle;
+    pointer-events: none; user-select: none;
+  }
+  .capbox-num.on { fill: #00e5ff; }
   .flip-menu-wrap {
     position: relative;
   }
@@ -1069,6 +1121,8 @@
         <button class="menu-item" id="selectPlayerBtn">👤 Select Player</button>
         <div class="menu-divider"></div>
         <button class="menu-item" id="installDemoBtn">⬇ Install Demo Play</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" id="clearScreenBtn">🧹 Clear Screen</button>
       </div>
     </div>
     <button class="top-btn" id="playsBtn">📂 PLAYS</button>
@@ -1110,6 +1164,7 @@
         <button class="flip-menu-item" id="resetBtn">✕ Clear Field</button>
       </div>
     </div>
+    <button class="top-btn" id="trackerBtn">🎯 GAME TRACKER</button>
     <select class="top-select" id="playerSelect" style="display:none">
       <option value="">Select player…</option>
     </select>
@@ -1118,6 +1173,21 @@
       <button id="sideOff" class="offense active">Offense</button>
       <button id="sideDef" class="defense">Defense</button>
     </div>
+  </div>
+
+  <div class="tracker-ribbon" id="trackerRibbon" style="display:none">
+    <div class="gt-menu-wrap">
+      <button class="gt-btn" id="gtGamesBtn">🎮 <span id="gtGameName">Game</span> ▾</button>
+      <div class="gt-menu-panel" id="gtGamesMenu">
+        <button class="flip-menu-item" id="gtNewGame">➕ New Game</button>
+        <button class="flip-menu-item" id="gtSwitchGame">🔁 Switch Game</button>
+        <button class="flip-menu-item" id="gtRenameGame">✎ Rename Game</button>
+        <button class="flip-menu-item" id="gtReviewBtn">📋 Review Plays</button>
+        <button class="flip-menu-item" id="gtDeleteGame">🗑 Delete Game</button>
+      </div>
+    </div>
+    <button class="gt-btn gt-record" id="gtRecordBtn">⏺ Record</button>
+    <div class="gt-chips" id="gtChips"></div>
   </div>
 
   <div class="main">
@@ -1500,9 +1570,43 @@ function updateCapBoxes() {
       rect.style.cursor = 'pointer';
       rect.dataset.row = row;
       rect.dataset.col = col;
-      // Long-press handler
+      // Long-press handler (color picker)
       attachLongPress(rect, (e) => openCapBoxPicker(row, col, e));
+      // Game Tracker: short-tap toggles this box as a preread for the active play
+      if (typeof trackerActive !== 'undefined' && trackerActive) {
+        rect.style.pointerEvents = 'all';
+        attachCapBoxTap(rect, () => gtTogglePreread(`${col + 1}-${row + 1}`));
+      }
       g.appendChild(rect);
+
+      // Game Tracker: numbered label + preread highlight ring
+      if (typeof trackerActive !== 'undefined' && trackerActive) {
+        const num = `${col + 1}-${row + 1}`;
+        const isPre = gtActivePrereadSet().has(num);
+        const cx = cellX + cellW / 2;
+        const cy = (y0 + row * widthStep) + widthStep / 2;
+        if (isPre) {
+          const ring = document.createElementNS(ns, 'rect');
+          ring.setAttribute('x', cellX + 0.4);
+          ring.setAttribute('y', y0 + row * widthStep + 0.4);
+          ring.setAttribute('width', cellW - 0.8);
+          ring.setAttribute('height', widthStep - 0.8);
+          ring.setAttribute('rx', 0.5);
+          ring.setAttribute('fill', 'none');
+          ring.setAttribute('stroke', '#00e5ff');
+          ring.setAttribute('stroke-width', 0.35);
+          ring.style.pointerEvents = 'none';
+          g.appendChild(ring);
+        }
+        const tNum = document.createElementNS(ns, 'text');
+        tNum.setAttribute('class', 'capbox-num' + (isPre ? ' on' : ''));
+        tNum.setAttribute('x', cx);
+        tNum.setAttribute('y', cy);
+        const ang = flipped ? -90 : 90;
+        tNum.setAttribute('transform', `rotate(${ang} ${cx} ${cy})`);
+        tNum.textContent = num;
+        g.appendChild(tNum);
+      }
     }
   }
 
@@ -3206,6 +3310,47 @@ document.getElementById('defaultBtn').addEventListener('click', () => {
   loadDefault();
   updatePlayNameLabel();
   showHelper("Offense reset");
+});
+
+// CLEAR SCREEN — full reset to the just-reopened state. Wipes routes, defense,
+// cap-box fills + toggle, triangles, all coverage tags, flip + play-name state,
+// and restores the starting Twins-Right formation at LOS 35. Leaves camera/zoom
+// preferences untouched.
+function clearScreen() {
+  // segment/waypoint selection
+  selectedSegmentIdx = null;
+  selectedWaypointIdx = null;
+  selectedBranchIdx = null;
+  selectedSegmentIsBranch = false;
+  // play + coverage state
+  currentPlayName = null;
+  playNameFlipped = false;
+  basePlaySnapshot = null;
+  cover2Variant = null;
+  cover3Variant = null;
+  blitzVariant = null;
+  currentCoverage = 'base';
+  // overlays
+  trianglesOn = false;
+  capBoxesOn = false;
+  capBoxFills = {};
+  // view orientation
+  flipped = false;
+
+  // Rebuild the starting formation (clears players/routes, los=35, render).
+  loadDefault();
+
+  // Repaint overlays that loadDefault() doesn't cover.
+  renderOutsideWRTriangles();
+  updateCapBoxes();
+  updateCoverageButton();
+  updatePlayNameLabel();
+  applyCamera();
+}
+document.getElementById('clearScreenBtn').addEventListener('click', () => {
+  closeMenu();
+  clearScreen();
+  showHelper("Screen cleared");
 });
 
 //=========================================================================
@@ -5404,6 +5549,262 @@ async function installBunchMeshPlay() {
     });
   });
 }
+
+//=========================================================================
+// GAME TRACKER — record called plays in order; tap numbered cap boxes as
+// preplay reads; organize by named game; review (list + tap-to-redraw).
+//=========================================================================
+let trackerActive = false;
+let currentGameId = null;
+let currentGame = null;     // { id, name, createdAt, plays: [ {id,name,snapshot,prereads:[],calledAt} ] }
+let activeEntryId = null;   // entry whose play is shown + whose reads are editable
+
+function gtActiveEntry() {
+  if (!currentGame || !activeEntryId) return null;
+  return currentGame.plays.find(e => e.id === activeEntryId) || null;
+}
+function gtActivePrereadSet() {
+  const e = gtActiveEntry();
+  return new Set(e ? e.prereads : []);
+}
+
+// Short tap (not a long-press, no drag) on a cap-box cell.
+function attachCapBoxTap(el, onTap) {
+  let sp = null, st = 0, moved = false;
+  const start = (e) => { const p = (e.touches && e.touches[0]) || e; sp = { x: p.clientX, y: p.clientY }; st = Date.now(); moved = false; };
+  const move = (e) => { if (!sp) return; const p = (e.touches && e.touches[0]) || e; if (Math.hypot(p.clientX - sp.x, p.clientY - sp.y) > 8) moved = true; };
+  const end = (e) => {
+    if (!sp) return;
+    const quick = (Date.now() - st) < 500 && !moved;
+    sp = null;
+    if (quick) { e.preventDefault(); e.stopPropagation(); onTap(e); }
+  };
+  el.addEventListener('touchstart', start, { passive: false });
+  el.addEventListener('touchmove', move, { passive: true });
+  el.addEventListener('touchend', end);
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mousemove', move);
+  el.addEventListener('mouseup', end);
+}
+
+async function gtTogglePreread(num) {
+  if (!trackerActive) return;
+  const e = gtActiveEntry();
+  if (!e) { showHelper("Record a play first, then tap your reads"); return; }
+  const i = e.prereads.indexOf(num);
+  if (i >= 0) e.prereads.splice(i, 1); else e.prereads.push(num);
+  e.prereads.sort();
+  updateCapBoxes();
+  gtRenderRibbon();
+  await gtSaveGame();
+}
+
+// ---- persistence (games:<id>, games:_index, games:_active) ----
+async function gtSaveGame() {
+  if (!currentGame) return;
+  try {
+    await storageSet(`games:${currentGame.id}`, JSON.stringify(currentGame));
+    const idx = await getIndex('games');
+    const meta = { id: currentGame.id, name: currentGame.name, createdAt: currentGame.createdAt, playCount: currentGame.plays.length, savedAt: Date.now() };
+    const found = idx.find(g => g.id === currentGame.id);
+    if (found) Object.assign(found, meta); else idx.unshift(meta);
+    await setIndex('games', idx);
+    await storageSet('games:_active', currentGame.id);
+  } catch (err) { showHelper("Game save failed"); }
+}
+async function gtLoadGameById(id) {
+  const raw = await storageGet(`games:${id}`);
+  if (!raw) return false;
+  try { currentGame = JSON.parse(raw); currentGameId = id; activeEntryId = null; return true; }
+  catch { return false; }
+}
+function gtDefaultGameName() {
+  return 'Game ' + new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+async function gtEnsureGame() {
+  if (currentGame) return;
+  const activeId = await storageGet('games:_active');
+  if (activeId && await gtLoadGameById(activeId)) return;
+  currentGame = { id: newId(), name: gtDefaultGameName(), createdAt: Date.now(), plays: [] };
+  currentGameId = currentGame.id;
+  activeEntryId = null;
+  await gtSaveGame();
+}
+
+// ---- sub-ribbon render ----
+function gtRenderRibbon() {
+  const nameEl = document.getElementById('gtGameName');
+  if (nameEl) nameEl.textContent = currentGame ? currentGame.name : 'No game';
+  const chips = document.getElementById('gtChips');
+  if (!chips) return;
+  if (!currentGame || currentGame.plays.length === 0) {
+    chips.innerHTML = '<span class="gt-empty">No plays yet — set a play and hit Record.</span>';
+    return;
+  }
+  chips.innerHTML = currentGame.plays.map((e, i) => {
+    const reads = (e.prereads && e.prereads.length) ? `<span class="reads">${e.prereads.join(' ')}</span>` : '';
+    const active = e.id === activeEntryId ? ' active' : '';
+    return `<button class="gt-chip${active}" data-entry="${e.id}"><span class="n">#${i + 1}</span> ${escapeHtml(e.name)} ${reads}</button>`;
+  }).join('');
+  chips.querySelectorAll('.gt-chip').forEach(c => {
+    c.addEventListener('click', () => gtReviewEntry(c.dataset.entry));
+  });
+  chips.scrollLeft = chips.scrollWidth;
+}
+
+// ---- record current play ----
+async function gtRecordPlay() {
+  await gtEnsureGame();
+  if (!currentGame) return;
+  const name = (currentPlayName && String(currentPlayName).trim()) || `Play ${currentGame.plays.length + 1}`;
+  const entry = { id: newId(), name, snapshot: getPlayPayload(), prereads: [], calledAt: Date.now() };
+  currentGame.plays.push(entry);
+  activeEntryId = entry.id;
+  await gtSaveGame();
+  gtRenderRibbon();
+  updateCapBoxes();
+  showHelper(`Recorded #${currentGame.plays.length}: ${name} — now tap your reads`);
+}
+
+// ---- review one entry (redraw it + show its reads) ----
+function gtReviewEntry(id) {
+  if (!currentGame) return;
+  const i = currentGame.plays.findIndex(e => e.id === id);
+  if (i < 0) return;
+  const e = currentGame.plays[i];
+  applyPlayPayload(e.snapshot, { isBaseLoad: true });
+  render(); renderRoutes(); updateLos();
+  currentPlayName = e.name; playNameFlipped = false;
+  activeEntryId = id;
+  if (!capBoxesOn) capBoxesOn = true;
+  updateCapBoxes();
+  gtRenderRibbon();
+  showHelper(`#${i + 1}: ${e.name}` + (e.prereads.length ? ` · reads ${e.prereads.join(' ')}` : ''));
+}
+
+// ---- name prompt helper ----
+function gtPromptText(title, label, value, onOk) {
+  openModal(title,
+    `<label>${label}</label>
+     <input type="text" id="gtTextInput" value="${escapeHtmlAttr(value || '')}" maxlength="40" autocomplete="off" autocorrect="off">`,
+    { confirmText: 'OK', onConfirm: () => {
+        const v = document.getElementById('gtTextInput').value.trim();
+        if (!v) { showHelper("Name is required"); return; }
+        closeModal(); onOk(v);
+    }});
+}
+
+// ---- games menu actions ----
+function gtNewGame() {
+  gtPromptText('New Game', 'Game name', gtDefaultGameName(), async (name) => {
+    currentGame = { id: newId(), name, createdAt: Date.now(), plays: [] };
+    currentGameId = currentGame.id; activeEntryId = null;
+    await gtSaveGame();
+    gtRenderRibbon(); updateCapBoxes();
+    showHelper(`Started "${name}"`);
+  });
+}
+function gtRenameGame() {
+  if (!currentGame) { showHelper("No active game"); return; }
+  gtPromptText('Rename Game', 'Game name', currentGame.name, async (name) => {
+    currentGame.name = name;
+    await gtSaveGame();
+    gtRenderRibbon();
+    showHelper(`Renamed to "${name}"`);
+  });
+}
+async function gtSwitchGame() {
+  const idx = await getIndex('games');
+  if (idx.length === 0) { showHelper("No saved games yet"); return; }
+  const rows = idx.map(g => `
+    <li>
+      <div class="name" data-game-id="${g.id}">
+        ${escapeHtml(g.name)}
+        <div class="when">${g.playCount || 0} plays · ${new Date(g.createdAt).toLocaleDateString()}</div>
+      </div>
+      <button class="del" data-del-game="${g.id}" title="Delete">✕</button>
+    </li>`).join('');
+  openModal('Switch Game', `<ul class="saved-list">${rows}</ul>`, { hideConfirm: true });
+  modalBody.querySelectorAll('.name').forEach(el => {
+    el.addEventListener('click', async () => {
+      const ok = await gtLoadGameById(el.dataset.gameId);
+      if (!ok) { showHelper("Could not load game"); return; }
+      await storageSet('games:_active', currentGame.id);
+      closeModal(); gtRenderRibbon(); updateCapBoxes();
+      showHelper(`Loaded "${currentGame.name}"`);
+    });
+  });
+  modalBody.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await gtDeleteGameById(btn.dataset.delGame);
+      gtSwitchGame();
+    });
+  });
+}
+async function gtDeleteGameById(id) {
+  await storageDelete(`games:${id}`);
+  const idx = (await getIndex('games')).filter(g => g.id !== id);
+  await setIndex('games', idx);
+  if (currentGame && currentGame.id === id) {
+    currentGame = null; currentGameId = null; activeEntryId = null;
+    if (idx.length) { await gtLoadGameById(idx[0].id); await storageSet('games:_active', currentGameId); }
+    else { await storageDelete('games:_active'); }
+    gtRenderRibbon(); updateCapBoxes();
+  }
+}
+async function gtDeleteGame() {
+  if (!currentGame) { showHelper("No active game"); return; }
+  const ok = await confirmDialog('Delete Game', `Delete "${currentGame.name}" and all its recorded plays? This can't be undone.`, 'Delete');
+  if (!ok) return;
+  await gtDeleteGameById(currentGame.id);
+  showHelper("Game deleted");
+}
+function gtReviewAll() {
+  if (!currentGame || currentGame.plays.length === 0) { showHelper("No plays recorded yet"); return; }
+  const rows = currentGame.plays.map((e, i) => `
+    <li>
+      <div class="name" data-entry="${e.id}">
+        #${i + 1} · ${escapeHtml(e.name)}
+        <div class="when">${e.prereads.length ? 'reads: ' + e.prereads.join(', ') : 'no reads'} · ${new Date(e.calledAt).toLocaleTimeString()}</div>
+      </div>
+    </li>`).join('');
+  openModal(`${escapeHtml(currentGame.name)} — ${currentGame.plays.length} plays`, `<ul class="saved-list">${rows}</ul>`, { hideConfirm: true });
+  modalBody.querySelectorAll('.name').forEach(el => {
+    el.addEventListener('click', () => { gtReviewEntry(el.dataset.entry); closeModal(); });
+  });
+}
+
+// ---- activate / deactivate ----
+async function gtSetActive(on) {
+  trackerActive = on;
+  const ribbon = document.getElementById('trackerRibbon');
+  if (ribbon) ribbon.style.display = on ? '' : 'none';
+  document.getElementById('trackerBtn').classList.toggle('active', on);
+  if (on) {
+    await gtEnsureGame();
+    if (!capBoxesOn) capBoxesOn = true;   // reads need the numbered grid visible
+    gtRenderRibbon();
+    showHelper("Game Tracker on · set a play, hit Record, then tap your reads");
+  }
+  updateCapBoxes();
+}
+
+// ---- wiring ----
+document.getElementById('trackerBtn').addEventListener('click', () => { gtSetActive(!trackerActive); });
+document.getElementById('gtRecordBtn').addEventListener('click', gtRecordPlay);
+const gtGamesMenu = document.getElementById('gtGamesMenu');
+document.getElementById('gtGamesBtn').addEventListener('click', (e) => { e.stopPropagation(); gtGamesMenu.classList.toggle('open'); });
+document.addEventListener('click', (e) => {
+  if (!gtGamesMenu.classList.contains('open')) return;
+  if (e.target.closest('#gtGamesBtn, #gtGamesMenu')) return;
+  gtGamesMenu.classList.remove('open');
+});
+document.getElementById('gtNewGame').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtNewGame(); });
+document.getElementById('gtSwitchGame').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtSwitchGame(); });
+document.getElementById('gtRenameGame').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtRenameGame(); });
+document.getElementById('gtReviewBtn').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtReviewAll(); });
+document.getElementById('gtDeleteGame').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtDeleteGame(); });
 
 drawYardLines();
 drawHashMarks();
