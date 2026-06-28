@@ -1110,6 +1110,79 @@
     .bottom-bar { bottom: 16px; padding: 6px; }
     .bottom-bar button { padding: 8px 10px; font-size: 10px; }
   }
+  /* ===== Plays grid screen ===== */
+  #playsScreen {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 150; display: none; flex-direction: column;
+  }
+  #playsScreen.open { display: flex; }
+  .plays-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--panel-2);
+  }
+  .plays-head h2 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: .04em; }
+  .plays-head .spacer { flex: 1; }
+  .plays-head button {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    height: 34px; padding: 0 12px; border-radius: 6px; font: inherit; font-weight: 800;
+    font-size: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .plays-head button.on { background: var(--accent); color: #000; border-color: var(--accent); }
+  .folder-bar {
+    display: flex; align-items: center; gap: 6px; overflow-x: auto;
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .folder-bar::-webkit-scrollbar { display: none; }
+  .folder-chip {
+    flex: 0 0 auto; height: 30px; padding: 0 12px; border-radius: 15px;
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .folder-chip.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .plays-grid {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    padding: 12px; align-content: start;
+  }
+  .play-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; cursor: pointer; display: flex; flex-direction: column;
+    -webkit-tap-highlight-color: transparent; position: relative; user-select: none;
+  }
+  .play-card:active { border-color: var(--accent); }
+  .play-card .thumb { width: 100%; aspect-ratio: 1 / 1; background: #2d5a3d; display: block; }
+  .play-card .thumb svg { width: 100%; height: 100%; display: block; }
+  .play-card .cardname {
+    padding: 6px 8px; font-size: 12px; font-weight: 700; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--border);
+  }
+  .play-card .menu-dot {
+    position: absolute; top: 4px; right: 4px; width: 26px; height: 26px;
+    border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; border: none;
+    font-size: 15px; line-height: 26px; text-align: center; cursor: pointer; padding: 0;
+  }
+  .plays-grid.organizing .play-card { cursor: grab; }
+  .play-card.dragging { opacity: .3; }
+  .play-card.drag-clone {
+    position: fixed; z-index: 300; pointer-events: none; opacity: .95;
+    box-shadow: 0 12px 32px rgba(0,0,0,.6); margin: 0;
+  }
+  .plays-empty { grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 48px 12px; font-style: italic; }
+  .card-menu {
+    position: fixed; z-index: 320; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5); min-width: 180px; display: none;
+  }
+  .card-menu.open { display: block; }
+  .card-menu button {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text); padding: 12px 14px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .card-menu button:active { background: var(--panel-2); }
+  .card-menu button.danger { color: #ff6b6b; }
+  .card-menu .mtitle { padding: 9px 14px; font-size: 11px; color: var(--text-dim); border-bottom: 1px solid var(--border); font-weight:700; }
 </style>
 </head>
 <body>
@@ -1310,6 +1383,18 @@
   </div>
 
   <!-- Save / Load modal -->
+  <div id="playsScreen">
+    <div class="plays-head">
+      <h2>Plays</h2>
+      <div class="spacer"></div>
+      <button id="playsOrganizeBtn">Organize</button>
+      <button id="playsCloseBtn">Done</button>
+    </div>
+    <div class="folder-bar" id="folderBar"></div>
+    <div class="plays-grid" id="playsGrid"></div>
+  </div>
+  <div class="card-menu" id="cardMenu"></div>
+
   <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal" id="modal">
       <h3 id="modalTitle">Save Play</h3>
@@ -4736,7 +4821,7 @@ function showSelectPlayerDialog() {
   });
 }
 document.getElementById('playsBtn').addEventListener('click', () => {
-  showLoadDialog('plays', applyPlayPayload, 'Plays');
+  openPlaysScreen();
 });
 
 // ---- Play Creator dropdown ----
@@ -5846,6 +5931,376 @@ document.getElementById('gtSwitchGame').addEventListener('click', () => { gtGame
 document.getElementById('gtRenameGame').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtRenameGame(); });
 document.getElementById('gtReviewBtn').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtReviewAll(); });
 document.getElementById('gtDeleteGame').addEventListener('click', () => { gtGamesMenu.classList.remove('open'); gtDeleteGame(); });
+
+//=========================================================================
+// PLAYS GRID — visual 3-col scrollable browser of saved plays: schematic
+// thumbnails (offense + routes), folders, drag-to-reorder, rename/move/delete.
+//=========================================================================
+let playsCurrentFolder = 'all';   // 'all' | 'unfiled' | folderId
+let playsOrganizing = false;
+let cardMenuId = null;
+
+async function getFolders() {
+  const raw = await storageGet('plays:_folders');
+  if (!raw) return [];
+  try { const a = JSON.parse(raw); return Array.isArray(a) ? a : []; } catch { return []; }
+}
+async function saveFolders(folders) { await storageSet('plays:_folders', JSON.stringify(folders)); }
+
+// Build a faithful SVG thumbnail of a play, drawn the SAME way the field
+// renders it (real route geometry + arrowheads, field-green background, white
+// LOS, real tokens) and wrapped in the same -90 rotation so the orientation
+// matches exactly what you see on screen.
+function buildPlayThumb(payload) {
+  const off = (payload.players || []).filter(p => p.side === 'offense');
+  const routes = payload.routes || [];
+  if (off.length === 0) return `<svg viewBox="0 0 100 100"></svg>`;
+  const ownerById = {}; off.forEach(p => ownerById[p.id] = p);
+  const f2 = (n) => (Math.round(n * 100) / 100);
+
+  // ---- bounding box in field coords ----
+  const allPts = [];
+  off.forEach(p => allPts.push({ x: p.x, y: p.y }));
+  routes.forEach(r => {
+    const owner = ownerById[r.ownerId]; if (!owner) return;
+    const pts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+    pts.forEach(pt => allPts.push(pt));
+    const endPt = pts[pts.length - 1];
+    (r.branches || []).forEach(br => { [endPt, ...(br.points || [])].forEach(pt => allPts.push(pt)); });
+  });
+  let X0 = Infinity, X1 = -Infinity, Y0 = Infinity, Y1 = -Infinity;
+  allPts.forEach(pt => { if (pt.x < X0) X0 = pt.x; if (pt.x > X1) X1 = pt.x; if (pt.y < Y0) Y0 = pt.y; if (pt.y > Y1) Y1 = pt.y; });
+  const pad = 2.5;
+  X0 -= pad; X1 += pad; Y0 -= pad; Y1 += pad;
+  // Square the crop about its center so the thumbnail fills the (square) card
+  // edge-to-edge with field green — no black letterboxing, nothing cut off.
+  const cx = (X0 + X1) / 2, cy = (Y0 + Y1) / 2;
+  const S = Math.max(X1 - X0, Y1 - Y0);
+  X0 = cx - S / 2; X1 = cx + S / 2; Y0 = cy - S / 2; Y1 = cy + S / 2;
+  const Wf = S, Hf = S;
+  const vb = `${f2(cx - S / 2)} ${f2(cy - S / 2)} ${f2(S)} ${f2(S)}`;
+
+  let g = '';
+  // field background
+  g += `<rect x="${f2(X0)}" y="${f2(Y0)}" width="${f2(Wf)}" height="${f2(Hf)}" fill="#2d5a3d"/>`;
+  // faint yard lines + white LOS
+  const losX = 8.88 + (payload.losYards || 35) * YARD;
+  for (let yd = -10; yd <= 30; yd += 5) {
+    const lx = losX + yd * YARD;
+    if (lx < X0 || lx > X1) continue;
+    g += `<line x1="${f2(lx)}" y1="${f2(Y0)}" x2="${f2(lx)}" y2="${f2(Y1)}" stroke="#3f6b4f" stroke-width="0.2"/>`;
+  }
+  if (losX >= X0 && losX <= X1)
+    g += `<line x1="${f2(losX)}" y1="${f2(Y0)}" x2="${f2(losX)}" y2="${f2(Y1)}" stroke="#ffffff" stroke-width="0.35" opacity="0.85"/>`;
+
+  // routes — reuse the real geometry helpers so curves/arrows match the field
+  routes.forEach(r => {
+    const owner = ownerById[r.ownerId]; if (!owner) return;
+    const color = owner.color;
+    const pts = [{ x: owner.x, y: owner.y }, ...r.points.slice(1)];
+    const trimmed = trimPathEnd(pts, 0.3);
+    if (!r.smoothed) {
+      for (let i = 0; i < trimmed.length - 1; i++)
+        g += `<path d="M ${f2(trimmed[i].x)} ${f2(trimmed[i].y)} L ${f2(trimmed[i + 1].x)} ${f2(trimmed[i + 1].y)}" fill="none" stroke="${color}" stroke-width="0.55" stroke-linecap="round" stroke-linejoin="round"/>`;
+    } else {
+      const d = pathDFromRoute({ ...r, points: trimmed });
+      if (d) g += `<path d="${d}" fill="none" stroke="${color}" stroke-width="0.55" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    if (!r.branches || r.branches.length === 0) {
+      g += `<path d="${arrowAtEnd(pts, color)}" fill="${color}" stroke="${color}" stroke-width="0.15" stroke-linejoin="round"/>`;
+    } else {
+      const endPt = pts[pts.length - 1];
+      r.branches.forEach(br => {
+        if (!br.points || br.points.length < 1) return;
+        const bpts = [endPt, ...br.points];
+        const bt = trimPathEnd(bpts, 0.3);
+        for (let i = 0; i < bt.length - 1; i++)
+          g += `<path d="M ${f2(bt[i].x)} ${f2(bt[i].y)} L ${f2(bt[i + 1].x)} ${f2(bt[i + 1].y)}" fill="none" stroke="${color}" stroke-width="0.5" stroke-linecap="round" stroke-dasharray="0.8 1.2"/>`;
+        g += `<path d="${arrowAtEnd(bpts, color)}" fill="${color}" stroke="${color}" stroke-width="0.15" stroke-linejoin="round"/>`;
+      });
+    }
+  });
+
+  // tokens — offense circles with upright labels (counter-rotate +90)
+  off.forEach(p => {
+    const lum = (typeof colorLum === 'function') ? colorLum(p.color) : 0.5;
+    const tcol = lum > 0.6 ? '#000' : '#fff';
+    g += `<circle cx="${f2(p.x)}" cy="${f2(p.y)}" r="1.7" fill="${p.color}" stroke="#0b0d0f" stroke-width="0.25"/>`;
+    g += `<text x="${f2(p.x)}" y="${f2(p.y)}" transform="rotate(90 ${f2(p.x)} ${f2(p.y)})" font-size="2.1" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="${tcol}" font-family="Arial,sans-serif">${escapeHtml(p.label || '')}</text>`;
+  });
+
+  return `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid meet"><g transform="rotate(-90 ${f2(cx)} ${f2(cy)})">${g}</g></svg>`;
+}
+
+async function openPlaysScreen() {
+  document.getElementById('playsScreen').classList.add('open');
+  playsOrganizing = false;
+  document.getElementById('playsOrganizeBtn').classList.remove('on');
+  await renderFolderBar();
+  await renderPlaysGrid();
+}
+function closePlaysScreen() { document.getElementById('playsScreen').classList.remove('open'); closeCardMenu(); }
+
+async function renderFolderBar() {
+  const bar = document.getElementById('folderBar');
+  const folders = await getFolders();
+  let html = '';
+  html += `<button class="folder-chip ${playsCurrentFolder === 'all' ? 'active' : ''}" data-folder="all">All</button>`;
+  html += `<button class="folder-chip ${playsCurrentFolder === 'unfiled' ? 'active' : ''}" data-folder="unfiled">Unfiled</button>`;
+  folders.forEach(f => {
+    html += `<button class="folder-chip ${playsCurrentFolder === f.id ? 'active' : ''}" data-folder="${f.id}">${escapeHtml(f.name)}</button>`;
+  });
+  html += `<button class="folder-chip" data-folder="__new">＋ Folder</button>`;
+  bar.innerHTML = html;
+  bar.querySelectorAll('.folder-chip').forEach(c => {
+    const f = c.dataset.folder;
+    c.addEventListener('click', async () => {
+      if (f === '__new') { createFolderPrompt(); return; }
+      playsCurrentFolder = f;
+      await renderFolderBar(); await renderPlaysGrid();
+    });
+    if (f !== 'all' && f !== 'unfiled' && f !== '__new') {
+      attachLongPress(c, (e) => openFolderMenu(f, e));
+    }
+  });
+}
+
+function createFolderPrompt() {
+  gtPromptText('New Folder', 'Folder name', '', async (name) => {
+    const folders = await getFolders();
+    const folder = { id: newId(), name };
+    folders.push(folder);
+    await saveFolders(folders);
+    playsCurrentFolder = folder.id;
+    await renderFolderBar(); await renderPlaysGrid();
+  });
+}
+
+async function renderPlaysGrid() {
+  const grid = document.getElementById('playsGrid');
+  const idx = await getIndex('plays');
+  let list = idx;
+  if (playsCurrentFolder === 'unfiled') list = idx.filter(it => !it.folderId);
+  else if (playsCurrentFolder !== 'all') list = idx.filter(it => it.folderId === playsCurrentFolder);
+  grid.classList.toggle('organizing', playsOrganizing);
+  if (list.length === 0) { grid.innerHTML = `<div class="plays-empty">No plays here yet.</div>`; return; }
+  const cards = await Promise.all(list.map(async (it) => {
+    let thumb = '';
+    try { const raw = await storageGet(`plays:${it.id}`); if (raw) thumb = buildPlayThumb(JSON.parse(raw)); } catch {}
+    return `<div class="play-card" data-id="${it.id}">
+      <div class="thumb">${thumb}</div>
+      <div class="cardname">${escapeHtml(it.name)}</div>
+      <button class="menu-dot" data-menu="${it.id}">⋯</button>
+    </div>`;
+  }));
+  grid.innerHTML = cards.join('');
+  grid.querySelectorAll('.play-card').forEach(card => {
+    const id = card.dataset.id;
+    const dot = card.querySelector('.menu-dot');
+    if (dot) dot.addEventListener('click', (e) => { e.stopPropagation(); openCardMenu(id, e); });
+    if (playsOrganizing) attachCardDrag(card);
+    else card.addEventListener('click', () => loadPlayById(id));
+  });
+}
+
+async function loadPlayById(id) {
+  const raw = await storageGet(`plays:${id}`);
+  if (!raw) { showHelper("Could not load"); return; }
+  try {
+    const payload = JSON.parse(raw);
+    applyPlayPayload(payload, { isBaseLoad: true });
+    render(); renderRoutes(); updateLos(); updateCapBoxes();
+    const idx = await getIndex('plays');
+    const item = idx.find(i => i.id === id);
+    if (item) { currentPlayName = item.name; playNameFlipped = false; }
+    closePlaysScreen();
+    showHelper(`Loaded "${item ? item.name : 'play'}"`);
+  } catch { showHelper("Load failed (corrupt data)"); }
+}
+
+// ---- per-card menu (rename / move to folder / delete) ----
+function positionMenu(menu, ev) {
+  const x = (ev && (ev.clientX || (ev.touches && ev.touches[0] && ev.touches[0].clientX))) || 40;
+  const y = (ev && (ev.clientY || (ev.touches && ev.touches[0] && ev.touches[0].clientY))) || 80;
+  menu.style.visibility = 'hidden'; menu.style.left = '0px'; menu.style.top = '0px';
+  requestAnimationFrame(() => {
+    const r = menu.getBoundingClientRect();
+    const nx = Math.min(x, window.innerWidth - r.width - 8);
+    const ny = Math.min(y, window.innerHeight - r.height - 8);
+    menu.style.left = Math.max(8, nx) + 'px'; menu.style.top = Math.max(8, ny) + 'px';
+    menu.style.visibility = 'visible';
+  });
+}
+function closeCardMenu() { const m = document.getElementById('cardMenu'); m.classList.remove('open'); cardMenuId = null; }
+
+async function openCardMenu(id, ev) {
+  cardMenuId = id;
+  const idx = await getIndex('plays');
+  const item = idx.find(i => i.id === id);
+  const folders = await getFolders();
+  const menu = document.getElementById('cardMenu');
+  let html = `<button data-act="rename">✎ Rename</button>`;
+  html += `<div class="mtitle">Move to</div>`;
+  html += `<button data-move="">${item && !item.folderId ? '✓ ' : ''}Unfiled</button>`;
+  folders.forEach(f => { html += `<button data-move="${f.id}">${item && item.folderId === f.id ? '✓ ' : ''}${escapeHtml(f.name)}</button>`; });
+  html += `<button class="danger" data-act="delete">🗑 Delete</button>`;
+  menu.innerHTML = html;
+  menu.classList.add('open');
+  positionMenu(menu, ev);
+  menu.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (b.dataset.act === 'rename') { closeCardMenu(); renamePlay(id); }
+      else if (b.dataset.act === 'delete') { closeCardMenu(); deletePlay(id); }
+      else if (b.dataset.move !== undefined) { closeCardMenu(); await movePlayToFolder(id, b.dataset.move || null); }
+    });
+  });
+}
+function renamePlay(id) {
+  getIndex('plays').then(idx => {
+    const item = idx.find(i => i.id === id); if (!item) return;
+    gtPromptText('Rename Play', 'Play name', item.name, async (name) => {
+      item.name = name; await setIndex('plays', idx); await renderPlaysGrid();
+      showHelper(`Renamed to "${name}"`);
+    });
+  });
+}
+async function deletePlay(id) {
+  const idx = await getIndex('plays');
+  const item = idx.find(i => i.id === id);
+  const ok = await confirmDialog('Delete Play', `Delete "${item ? item.name : 'this play'}"? This can't be undone.`, 'Delete');
+  if (!ok) return;
+  await storageDelete(`plays:${id}`);
+  await setIndex('plays', idx.filter(i => i.id !== id));
+  await renderPlaysGrid();
+  showHelper("Play deleted");
+}
+async function movePlayToFolder(id, folderId) {
+  const idx = await getIndex('plays');
+  const item = idx.find(i => i.id === id); if (!item) return;
+  if (folderId) item.folderId = folderId; else delete item.folderId;
+  await setIndex('plays', idx);
+  await renderPlaysGrid();
+  showHelper(folderId ? "Moved" : "Moved to Unfiled");
+}
+
+// ---- folder menu (rename / delete) ----
+function openFolderMenu(folderId, ev) {
+  const menu = document.getElementById('cardMenu');
+  menu.innerHTML = `<button data-fact="rename">✎ Rename Folder</button><button class="danger" data-fact="delete">🗑 Delete Folder</button>`;
+  menu.classList.add('open');
+  positionMenu(menu, ev);
+  menu.querySelectorAll('button').forEach(b => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (b.dataset.fact === 'rename') { closeCardMenu(); renameFolder(folderId); }
+    else { closeCardMenu(); deleteFolder(folderId); }
+  }));
+}
+function renameFolder(folderId) {
+  getFolders().then(folders => {
+    const f = folders.find(x => x.id === folderId); if (!f) return;
+    gtPromptText('Rename Folder', 'Folder name', f.name, async (name) => {
+      f.name = name; await saveFolders(folders); await renderFolderBar();
+      showHelper("Folder renamed");
+    });
+  });
+}
+async function deleteFolder(folderId) {
+  const folders = await getFolders();
+  const f = folders.find(x => x.id === folderId);
+  const ok = await confirmDialog('Delete Folder', `Delete folder "${f ? f.name : ''}"? Plays inside move to Unfiled.`, 'Delete');
+  if (!ok) return;
+  await saveFolders(folders.filter(x => x.id !== folderId));
+  const idx = await getIndex('plays');
+  idx.forEach(it => { if (it.folderId === folderId) delete it.folderId; });
+  await setIndex('plays', idx);
+  if (playsCurrentFolder === folderId) playsCurrentFolder = 'all';
+  await renderFolderBar(); await renderPlaysGrid();
+  showHelper("Folder deleted");
+}
+
+// ---- drag to reorder (hold a card to pick it up; quick swipe scrolls) ----
+function cardUnder(x, y, exclude) {
+  const els = document.elementsFromPoint(x, y);
+  for (const el of els) { const c = el.closest && el.closest('.play-card'); if (c && c !== exclude && !c.classList.contains('drag-clone')) return c; }
+  return null;
+}
+async function persistOrder() {
+  const grid = document.getElementById('playsGrid');
+  const domIds = Array.from(grid.querySelectorAll('.play-card')).map(c => c.dataset.id);
+  const idx = await getIndex('plays');
+  const visible = new Set(domIds);
+  const slots = []; idx.forEach((it, i) => { if (visible.has(it.id)) slots.push(i); });
+  const byId = {}; idx.forEach(it => byId[it.id] = it);
+  slots.forEach((slotPos, k) => { idx[slotPos] = byId[domIds[k]]; });
+  await setIndex('plays', idx);
+}
+function attachCardDrag(card) {
+  const grid = document.getElementById('playsGrid');
+  let clone = null, dragging = false, holdTimer = null, offX = 0, offY = 0, sx = 0, sy = 0;
+  const getPt = (e) => (e.touches && e.touches[0]) || e;
+  const startDrag = (p) => {
+    dragging = true;
+    const r = card.getBoundingClientRect();
+    offX = p.clientX - r.left; offY = p.clientY - r.top;
+    clone = card.cloneNode(true); clone.classList.add('drag-clone');
+    clone.style.width = r.width + 'px'; clone.style.height = r.height + 'px';
+    clone.style.left = r.left + 'px'; clone.style.top = r.top + 'px';
+    document.body.appendChild(clone);
+    card.classList.add('dragging');
+  };
+  const cleanup = () => {
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+  };
+  const onMove = (e) => {
+    const p = getPt(e);
+    if (!dragging) {
+      if (holdTimer && Math.hypot(p.clientX - sx, p.clientY - sy) > 10) { clearTimeout(holdTimer); holdTimer = null; cleanup(); }
+      return;
+    }
+    e.preventDefault();
+    clone.style.left = (p.clientX - offX) + 'px'; clone.style.top = (p.clientY - offY) + 'px';
+    const target = cardUnder(p.clientX, p.clientY, card);
+    if (target) {
+      const tr = target.getBoundingClientRect();
+      if (p.clientY < tr.top + tr.height / 2) grid.insertBefore(card, target);
+      else grid.insertBefore(card, target.nextSibling);
+    }
+  };
+  const onEnd = async () => {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    cleanup();
+    if (clone) { clone.remove(); clone = null; }
+    if (dragging) { dragging = false; card.classList.remove('dragging'); await persistOrder(); }
+  };
+  const onStart = (e) => {
+    if (e.target.closest('.menu-dot')) return;
+    const p = getPt(e); sx = p.clientX; sy = p.clientY;
+    holdTimer = setTimeout(() => { holdTimer = null; startDrag(p); }, 200);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+  };
+  card.addEventListener('touchstart', onStart, { passive: false });
+  card.addEventListener('mousedown', onStart);
+}
+
+// ---- wiring ----
+document.getElementById('playsCloseBtn').addEventListener('click', closePlaysScreen);
+document.getElementById('playsOrganizeBtn').addEventListener('click', async () => {
+  playsOrganizing = !playsOrganizing;
+  document.getElementById('playsOrganizeBtn').classList.toggle('on', playsOrganizing);
+  showHelper(playsOrganizing ? "Organize: hold a card to drag · ⋯ to move/rename" : "Done organizing");
+  await renderPlaysGrid();
+});
+document.addEventListener('click', (e) => {
+  const m = document.getElementById('cardMenu');
+  if (m.classList.contains('open') && !m.contains(e.target) && !e.target.closest('.menu-dot') && !e.target.closest('.folder-chip')) closeCardMenu();
+});
 
 drawYardLines();
 drawHashMarks();
